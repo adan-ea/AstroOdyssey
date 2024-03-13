@@ -1,27 +1,8 @@
+use astro_odyssey::*;
 use bevy::{math::vec3, prelude::*, utils::hashbrown::HashSet, window::close_on_esc};
 use bevy_pancam::{PanCam, PanCamPlugin};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
-
-// Sprite sheet constants
-const SPRITE_PADDING: f32 = 2.0;
-const SPRITE_SCALE_FACTOR: usize = 5;
-const SPRITE_SHEET_HEIGHT: usize = 9;
-const SPRITE_SHEET_OFFSET: f32 = 2.0;
-const SPRITE_SHEET_PATH: &str = "sprite-sheet.png";
-const SPRITE_SHEET_WIDTH: usize = 8;
-const TILE_HEIGHT: usize = 8;
-const TILE_WIDTH: usize = 6;
-
-// Window constants
-const GRID_COLS: i32 = 200;
-const GRID_ROWS: i32 = 100;
-const GRID_W: usize = GRID_COLS as usize * TILE_WIDTH;
-const GRID_H: usize = GRID_ROWS as usize * TILE_HEIGHT;
-const BG_COLOR: (u8, u8, u8) = (181, 212, 220);
-
-// If seed is set to 0, the seed will be random
-const SEED: u32 = 0;
 
 #[derive(Component)]
 struct TileComponent;
