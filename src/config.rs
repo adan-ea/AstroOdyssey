@@ -15,5 +15,9 @@ pub const GRID_W: usize = GRID_COLS as usize * TILE_WIDTH;
 pub const GRID_H: usize = GRID_ROWS as usize * TILE_HEIGHT;
 pub const BG_COLOR: (u8, u8, u8) = (181, 212, 220);
 
+// Chunk constants
+pub const CHUNK_WIDTH: usize = 120;
+pub const CHUNK_HEIGHT: usize = 100;
+
 // If seed is set to 0, the seed will be random
 pub const SEED: u32 = 0;
