@@ -1,8 +1,11 @@
 use bevy::prelude::*;
 
+mod base;
+mod droids;
 mod map;
 mod systems;
 
+use base::BasePlugin;
 use map::MapPlugin;
 use systems::*;
 
@@ -12,8 +15,8 @@ pub struct SimPlugin;
 
 impl Plugin for SimPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state::<SimulationState>()
-            .add_plugins(MapPlugin)
+        app.init_state::<SimulationState>()
+            .add_plugins((MapPlugin, BasePlugin))
             .add_systems(Update, toggle_simulation.run_if(in_state(AppState::Sim)));
     }
 }

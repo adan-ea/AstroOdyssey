@@ -4,7 +4,7 @@ use super::SimulationState;
 
 pub fn toggle_simulation(
     mut commands: Commands,
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     simulation_state: ResMut<State<SimulationState>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
