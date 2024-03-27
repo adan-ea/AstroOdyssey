@@ -1,49 +1,66 @@
-use bevy::{math::vec3, prelude::*, utils::hashbrown::HashSet};
+use bevy::{prelude::*, utils::hashbrown::HashSet};
+use bevy_pancam::PanCam;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
-use crate::utils::*;
-use crate::*;
+use super::{
+    components::{Tile, TileComponent},
+    GRID_COLS, GRID_H, GRID_ROWS, GRID_W, SEED, SPRITE_PADDING, SPRITE_SCALE_FACTOR,
+    SPRITE_SHEET_HEIGHT, SPRITE_SHEET_OFFSET, SPRITE_SHEET_PATH, SPRITE_SHEET_WIDTH, TILE_HEIGHT,
+    TILE_WIDTH,
+};
 
-#[derive(Component)]
-pub struct TileComponent;
+// Handles user input to regenerate the world when the Tab key is pressed.
+pub fn handle_input(
+    mut commands: Commands,
+    keys: Res<ButtonInput<KeyCode>>,
+    tiles_query: Query<Entity, With<TileComponent>>,
+    asset_server: Res<AssetServer>,
+    texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    if keys.just_pressed(KeyCode::Tab) {
+        for entity in tiles_query.iter() {
+            commands.entity(entity).despawn();
+        }
 
-pub struct Tile {
-    pub pos: (i32, i32),
-    pub sprite: usize,
-    pub z_index: i32,
+        gen_world(&mut commands, asset_server, texture_atlases);
+    }
 }
 
-impl Tile {
-    // Creates a new Tile instance.
-    pub fn new(pos: (i32, i32), sprite: usize, z_index: i32) -> Self {
-        Self {
-            pos,
-            sprite,
-            z_index,
-        }
-    }
+// Sets up the initial state of the application.
+pub fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    commands
+        .spawn(Camera2dBundle {
+            transform: Transform::from_xyz(GRID_W as f32, GRID_H as f32, 0.0),
+            ..Default::default()
+        })
+        .insert(PanCam::default());
+
+    gen_world(&mut commands, asset_server, texture_atlases);
 }
 
 // Generates the world by creating tiles based on noise values.
 pub fn gen_world(
     commands: &mut Commands,
     asset_server: Res<AssetServer>,
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     let mut rng = rand::thread_rng();
     let mut base_spawned = false;
 
     let texture_handle = asset_server.load(SPRITE_SHEET_PATH);
-    let texture_atlas = TextureAtlas::from_grid(
-        texture_handle,
+    let layout = TextureAtlasLayout::from_grid(
         Vec2::new(TILE_WIDTH as f32, TILE_HEIGHT as f32),
         SPRITE_SHEET_WIDTH,
         SPRITE_SHEET_HEIGHT,
         Some(Vec2::splat(SPRITE_PADDING)),
         Some(Vec2::splat(SPRITE_SHEET_OFFSET)),
     );
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+    let texture_atlas_handle = texture_atlases.add(layout);
 
     let seed = if SEED == 0 { rng.gen() } else { SEED };
     let noise = Perlin::new(seed);
@@ -148,13 +165,17 @@ pub fn gen_world(
         let (x, y) = grid_to_world(x as f32, y as f32);
         let (x, y) = center_to_top_left(x, y);
 
+        // Spawn tiles using the new SpriteSheetBundle initialization
         commands.spawn((
             SpriteSheetBundle {
-                texture_atlas: texture_atlas_handle.clone(),
-                sprite: TextureAtlasSprite::new(tile.sprite),
+                atlas: TextureAtlas {
+                    layout: texture_atlas_handle.clone(),
+                    index: tile.sprite,
+                },
+                texture: texture_handle.clone(),
                 transform: Transform::from_scale(Vec3::splat(SPRITE_SCALE_FACTOR as f32))
-                    .with_translation(vec3(x, y, tile.z_index as f32)),
-                ..default()
+                    .with_translation(Vec3::new(x, y, tile.z_index as f32)),
+                ..Default::default()
             },
             TileComponent,
         ));
@@ -185,4 +206,19 @@ pub fn get_tile((x, y): (i32, i32), tiles: &HashSet<(i32, i32)>) -> (usize, i32)
     };
 
     (tile, nei_count)
+}
+
+// Converts grid coordinates to world coordinates.
+pub fn grid_to_world(x: f32, y: f32) -> (f32, f32) {
+    (
+        x * TILE_WIDTH as f32 * SPRITE_SCALE_FACTOR as f32,
+        y * TILE_HEIGHT as f32 * SPRITE_SCALE_FACTOR as f32,
+    )
+}
+
+// Converts center coordinates to top-left coordinates.
+pub fn center_to_top_left(x: f32, y: f32) -> (f32, f32) {
+    let x_center = x - (GRID_W as f32 * SPRITE_SCALE_FACTOR as f32) / 2.0;
+    let y_center = (GRID_H as f32 * SPRITE_SCALE_FACTOR as f32) / 2.0 - y;
+    (x_center, y_center)
 }
