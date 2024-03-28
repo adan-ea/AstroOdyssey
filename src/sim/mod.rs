@@ -11,12 +11,14 @@ use systems::*;
 
 use crate::AppState;
 
+use self::droids::DroidsPlugin;
+
 pub struct SimPlugin;
 
 impl Plugin for SimPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<SimulationState>()
-            .add_plugins((MapPlugin, BasePlugin))
+            .add_plugins((MapPlugin, BasePlugin, DroidsPlugin))
             .add_systems(Update, toggle_simulation.run_if(in_state(AppState::Sim)));
     }
 }

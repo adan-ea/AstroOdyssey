@@ -5,6 +5,8 @@ mod systems;
 
 use systems::*;
 
+use crate::AppState;
+
 // Sprite sheet constants
 pub const TILE_HEIGHT: usize = 8;
 pub const TILE_WIDTH: usize = 6;
@@ -28,7 +30,10 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup)
-            .add_systems(Update, handle_input);
+        app
+            // Enter State systems
+            .add_systems(OnEnter(AppState::Sim), setup)
+            // Exit State systems
+            .add_systems(OnExit(AppState::Sim), despawn_map);
     }
 }

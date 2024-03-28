@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-mod components;
+pub mod components;
 mod resources;
 mod systems;
 
@@ -16,8 +16,6 @@ pub struct BasePlugin;
 impl Plugin for BasePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ExplorerSpawnTimer>()
-            // Enter State systems
-            .add_systems(OnEnter(AppState::Sim), spawn_base)
             // Systems
             .add_systems(
                 Update,

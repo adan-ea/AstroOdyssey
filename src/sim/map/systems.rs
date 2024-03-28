@@ -3,26 +3,18 @@ use bevy_pancam::PanCam;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
+use crate::sim::base::components::Base;
+
 use super::{
     components::Tile, GRID_COLS, GRID_H, GRID_ROWS, GRID_W, SEED, SPRITE_PADDING,
     SPRITE_SCALE_FACTOR, SPRITE_SHEET_HEIGHT, SPRITE_SHEET_OFFSET, SPRITE_SHEET_PATH,
     SPRITE_SHEET_WIDTH, TILE_HEIGHT, TILE_WIDTH,
 };
 
-// Handles user input to regenerate the world when the Tab key is pressed.
-pub fn handle_input(
-    mut commands: Commands,
-    keys: Res<ButtonInput<KeyCode>>,
-    tiles_query: Query<Entity, With<Tile>>,
-    asset_server: Res<AssetServer>,
-    texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-) {
-    if keys.just_pressed(KeyCode::Tab) {
-        for entity in tiles_query.iter() {
-            commands.entity(entity).despawn();
-        }
-
-        gen_world(&mut commands, asset_server, texture_atlases);
+// Despawn all tiles when exiting the simulation state.
+pub fn despawn_map(mut commands: Commands, tiles_query: Query<Entity, With<Tile>>) {
+    for entity in tiles_query.iter() {
+        commands.entity(entity).despawn();
     }
 }
 
@@ -122,31 +114,37 @@ pub fn gen_world(
                 continue;
             }
 
-            // TODO: Look if it wouldn't be better to the the base generation at this stage
-            //  // Settlement
-            //  if !base_spawned
-            //      && noise_val > 0.1
-            //      && noise_val < 0.3
-            //      && noise_val3 < 0.4
-            //      && chance > 0.8
-            //  {
-            //      let chance2 = rng.gen_range(0.0..1.0);
-            //
-            //      if chance2 > 0.98 {
-            //          tiles.push(Tile::new((x, y), 19, 10,false, false));
-            //
-            //          // Convert grid coordinates to world coordinates
-            //          let (world_x, world_y) = grid_to_world(x as f32, y as f32);
-            //          println!(
-            //              "Base is at grid coordinates: ({}, {}), world coordinates: ({}, {})",
-            //              x, y, world_x, world_y
-            //          );
-            //
-            //          base_spawned = true;
-            //      }
-            //
-            //      continue;
-            //  }
+            // Settlement
+            if !base_spawned
+                && noise_val > 0.1
+                && noise_val < 0.3
+                && noise_val3 < 0.4
+                && chance > 0.8
+            {
+                let chance2 = rng.gen_range(0.0..1.0);
+
+                if chance2 > 0.98 {
+                    let (x, y) = grid_to_world(x as f32, y as f32);
+                    let (x, y) = center_to_top_left(x, y);
+
+                    commands.spawn((
+                        SpriteBundle {
+                            transform: Transform::from_xyz(x, y, 100.0),
+                            texture: asset_server.load("tiles/tileSnow.png"),
+                            ..default()
+                        },
+                        Base {
+                            pos: (x, y),
+                            iron: 0,
+                            nb_explorer_max: 10,
+                        },
+                        Name::new("Base"),
+                    ));
+                    base_spawned = true;
+                }
+
+                continue;
+            }
         }
     }
 
