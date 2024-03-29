@@ -3,10 +3,8 @@ use bevy_pancam::PanCam;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
-use crate::sim::base::{components::Base, BASE_MAX_EXPLORER};
-
 use super::{
-    components::Tile, GRID_COLS, GRID_H, GRID_ROWS, GRID_W, SEED, SPRITE_PADDING,
+    components::Tile, BaseSpawned, GRID_COLS, GRID_H, GRID_ROWS, GRID_W, SEED, SPRITE_PADDING,
     SPRITE_SCALE_FACTOR, SPRITE_SHEET_HEIGHT, SPRITE_SHEET_OFFSET, SPRITE_SHEET_PATH,
     SPRITE_SHEET_WIDTH, TILE_HEIGHT, TILE_WIDTH,
 };
@@ -23,6 +21,7 @@ pub fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
+    base_spawned_ew: EventWriter<BaseSpawned>,
 ) {
     commands
         .spawn(Camera2dBundle {
@@ -31,7 +30,12 @@ pub fn setup(
         })
         .insert(PanCam::default());
 
-    gen_world(&mut commands, asset_server, texture_atlases);
+    gen_world(
+        &mut commands,
+        asset_server,
+        texture_atlases,
+        base_spawned_ew,
+    );
 }
 
 // Generates the world by creating tiles based on noise values.
@@ -39,6 +43,7 @@ pub fn gen_world(
     commands: &mut Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
+    mut base_spawned_ew: EventWriter<BaseSpawned>,
 ) {
     let mut rng = rand::thread_rng();
     let mut base_spawned = false;
@@ -127,19 +132,9 @@ pub fn gen_world(
                     let (x, y) = grid_to_world(x as f32, y as f32);
                     let (x, y) = center_to_top_left(x, y);
 
-                    commands.spawn((
-                        SpriteBundle {
-                            transform: Transform::from_xyz(x, y, 100.0),
-                            texture: asset_server.load("tiles/tileSnow.png"),
-                            ..default()
-                        },
-                        Base {
-                            pos: Vec2::new(x, y),
-                            iron: 0,
-                            nb_explorer_max: BASE_MAX_EXPLORER,
-                        },
-                        Name::new("Base"),
-                    ));
+                    base_spawned_ew.send(BaseSpawned {
+                        position: Vec2::new(x, y),
+                    });
                     base_spawned = true;
                 }
 

@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 
 pub mod components;
+pub mod events;
 mod systems;
 
+use events::*;
 use systems::*;
 
 use crate::AppState;
@@ -31,6 +33,8 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app
+            // Events
+            .add_event::<BaseSpawned>()
             // Enter State systems
             .add_systems(OnEnter(AppState::Sim), setup)
             // Exit State systems

@@ -1,16 +1,42 @@
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::sim::droids::{
-    components::{DroidState, Robot},
-    explorer::{
-        components::{Explorer, ExplorerAction},
-        EXPLORER_DIRECTION, EXPLORER_ENERGY, EXPLORER_EXPLORATION_RADIUS, EXPLORER_IRON_COST,
-        EXPLORER_NAME, EXPLORER_SPEED, EXPLORER_SPRITE_PATH,
+use crate::sim::{
+    droids::{
+        components::{DroidState, Robot},
+        explorer::{
+            components::{Explorer, ExplorerAction},
+            EXPLORER_DIRECTION, EXPLORER_ENERGY, EXPLORER_EXPLORATION_RADIUS, EXPLORER_IRON_COST,
+            EXPLORER_NAME, EXPLORER_SPEED, EXPLORER_SPRITE_PATH,
+        },
     },
+    map::events::BaseSpawned,
 };
 
-use super::{Base, ExplorerSpawnTimer, BASE_RADIUS};
+use super::{Base, ExplorerSpawnTimer, BASE_MAX_EXPLORER, BASE_RADIUS, BASE_SPRITE_PATH};
+
+pub fn spawn_base(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut base_spawned_er: EventReader<BaseSpawned>,
+) {
+    for base_spawned in base_spawned_er.read() {
+        let x = base_spawned.position.x;
+        let y = base_spawned.position.y;
+        commands.spawn((
+            SpriteBundle {
+                transform: Transform::from_xyz(x, y, 100.0),
+                texture: asset_server.load(BASE_SPRITE_PATH),
+                ..default()
+            },
+            Base {
+                pos: Vec2::new(x, y),
+                iron: 0,
+                nb_explorer_max: BASE_MAX_EXPLORER,
+            },
+        ));
+    }
+}
 
 pub fn despawn_base(mut commands: Commands, query: Query<Entity, With<Base>>) {
     for entity in query.iter() {
