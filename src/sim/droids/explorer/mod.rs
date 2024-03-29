@@ -7,7 +7,6 @@ use self::systems::*;
 pub mod components;
 mod systems;
 
-pub const EXPLORER_NAME: &str = "Explorer";
 pub const EXPLORER_SPRITE_PATH: &str = "sprites/droids/explorer.png";
 pub const EXPLORER_SPEED: f32 = 200.0;
 pub const EXPLORER_ENERGY: f32 = 100.0;
@@ -20,9 +19,9 @@ pub struct ExplorerPlugin;
 impl Plugin for ExplorerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            Startup,
+            Update,
             (spawn_explorer)
-                .run_if(in_state(AppState::SimOver))
+                .run_if(in_state(AppState::Sim))
                 .run_if(in_state(SimulationState::Running)),
         );
     }

@@ -34,7 +34,7 @@ impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app
             // Events
-            .add_event::<BaseSpawned>()
+            .add_event::<BaseSpawnEvent>()
             // Enter State systems
             .add_systems(OnEnter(AppState::Sim), setup)
             // Exit State systems

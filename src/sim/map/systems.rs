@@ -4,7 +4,7 @@ use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
 use super::{
-    components::Tile, BaseSpawned, GRID_COLS, GRID_H, GRID_ROWS, GRID_W, SEED, SPRITE_PADDING,
+    components::Tile, BaseSpawnEvent, GRID_COLS, GRID_H, GRID_ROWS, GRID_W, SEED, SPRITE_PADDING,
     SPRITE_SCALE_FACTOR, SPRITE_SHEET_HEIGHT, SPRITE_SHEET_OFFSET, SPRITE_SHEET_PATH,
     SPRITE_SHEET_WIDTH, TILE_HEIGHT, TILE_WIDTH,
 };
@@ -21,7 +21,7 @@ pub fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    base_spawned_ew: EventWriter<BaseSpawned>,
+    base_spawned_ew: EventWriter<BaseSpawnEvent>,
 ) {
     commands
         .spawn(Camera2dBundle {
@@ -43,7 +43,7 @@ pub fn gen_world(
     commands: &mut Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    mut base_spawned_ew: EventWriter<BaseSpawned>,
+    mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
 ) {
     let mut rng = rand::thread_rng();
     let mut base_spawned = false;
@@ -132,7 +132,7 @@ pub fn gen_world(
                     let (x, y) = grid_to_world(x as f32, y as f32);
                     let (x, y) = center_to_top_left(x, y);
 
-                    base_spawned_ew.send(BaseSpawned {
+                    base_spawned_ew.send(BaseSpawnEvent {
                         position: Vec2::new(x, y),
                     });
                     base_spawned = true;

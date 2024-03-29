@@ -1,24 +1,16 @@
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::sim::{
-    droids::{
-        components::{DroidState, Robot},
-        explorer::{
-            components::{Explorer, ExplorerAction},
-            EXPLORER_DIRECTION, EXPLORER_ENERGY, EXPLORER_EXPLORATION_RADIUS, EXPLORER_IRON_COST,
-            EXPLORER_NAME, EXPLORER_SPEED, EXPLORER_SPRITE_PATH,
-        },
-    },
-    map::events::BaseSpawned,
-};
+use crate::sim::{droids::explorer::components::Explorer, map::events::BaseSpawnEvent};
 
-use super::{Base, ExplorerSpawnTimer, BASE_MAX_EXPLORER, BASE_RADIUS, BASE_SPRITE_PATH};
+use super::{
+    Base, ExplorerSpawnEvent, ExplorerSpawnTimer, BASE_MAX_EXPLORER, BASE_RADIUS, BASE_SPRITE_PATH,
+};
 
 pub fn spawn_base(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut base_spawned_er: EventReader<BaseSpawned>,
+    mut base_spawned_er: EventReader<BaseSpawnEvent>,
 ) {
     for base_spawned in base_spawned_er.read() {
         let x = base_spawned.position.x;
@@ -52,14 +44,13 @@ pub fn tick_explorer_spawn_timer(
 }
 
 pub fn spawn_explorer_over_time(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    droid_spawn_timer: Res<ExplorerSpawnTimer>,
-    droid_query: Query<Entity, With<Robot>>,
+    mut explorer_spawn_ew: EventWriter<ExplorerSpawnEvent>,
+    explorer_spawn_timer: Res<ExplorerSpawnTimer>,
+    explorer_query: Query<&Explorer>,
     base_query: Query<&Base>,
 ) {
-    if droid_spawn_timer.time.finished() {
-        if droid_query.iter().count() < base_query.single().nb_explorer_max {
+    if explorer_spawn_timer.time.finished() {
+        if explorer_query.iter().count() < base_query.single().nb_explorer_max {
             let base_pos = base_query.single().pos;
 
             // Generate random offsets within the spawn radius
@@ -70,26 +61,7 @@ pub fn spawn_explorer_over_time(
             // Calculate the spawn position relative to the base position
             let spawn_pos = Vec2::new(base_pos.x + dx, base_pos.y + dy);
 
-            commands.spawn((
-                SpriteBundle {
-                    transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 10.0),
-                    texture: asset_server.load(EXPLORER_SPRITE_PATH),
-                    ..default()
-                },
-                Explorer {
-                    exploration_radius: EXPLORER_EXPLORATION_RADIUS,
-                    explorer_action: ExplorerAction::Null,
-                },
-                Robot {
-                    direction: EXPLORER_DIRECTION,
-                    energy: EXPLORER_ENERGY,
-                    speed: EXPLORER_SPEED,
-                    iron_cost: EXPLORER_IRON_COST,
-                    destination: Vec2::new(base_pos.x, base_pos.y),
-                    droid_state: DroidState::Idle,
-                },
-                Name::new(EXPLORER_NAME),
-            ));
+            explorer_spawn_ew.send(ExplorerSpawnEvent { spawn_pos });
         }
     }
 }

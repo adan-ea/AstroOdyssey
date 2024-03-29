@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 
 pub mod components;
+pub mod events;
 mod resources;
 mod systems;
 
 use components::*;
+use events::*;
 use resources::*;
 use systems::*;
 
@@ -12,7 +14,7 @@ use crate::AppState;
 
 use super::SimulationState;
 
-pub const BASE_SPRITE_PATH: &str = "tiles/explorer-sprite.png";
+pub const BASE_SPRITE_PATH: &str = "tiles/tileSnow.png";
 pub const BASE_RADIUS: f32 = 250.0;
 pub const BASE_MAX_EXPLORER: usize = 10;
 
@@ -23,6 +25,8 @@ impl Plugin for BasePlugin {
         app
             // Resources
             .init_resource::<ExplorerSpawnTimer>()
+            // Events
+            .add_event::<ExplorerSpawnEvent>()
             // Systems
             .add_systems(
                 Update,
