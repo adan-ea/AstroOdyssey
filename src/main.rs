@@ -32,8 +32,8 @@ fn main() {
 
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 pub enum AppState {
-    #[default]
     MainMenu,
+    #[default]
     Sim,
     SimOver,
 }
