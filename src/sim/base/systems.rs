@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::sim::droids::{
-    components::Robot,
+    components::{DroidState, Robot},
     explorer::{
         components::{Explorer, ExplorerAction},
         EXPLORER_DIRECTION, EXPLORER_ENERGY, EXPLORER_EXPLORATION_RADIUS, EXPLORER_IRON_COST,
@@ -10,7 +10,7 @@ use crate::sim::droids::{
     },
 };
 
-use super::{Base, ExplorerSpawnTimer};
+use super::{Base, ExplorerSpawnTimer, BASE_RADIUS};
 
 pub fn despawn_base(mut commands: Commands, query: Query<Entity, With<Base>>) {
     for entity in query.iter() {
@@ -36,20 +36,17 @@ pub fn spawn_explorer_over_time(
         if droid_query.iter().count() < base_query.single().nb_explorer_max {
             let base_pos = base_query.single().pos;
 
-            // Define a radius within which the explorer can spawn
-            let spawn_radius = 250.0;
-
             // Generate random offsets within the spawn radius
             let mut rng = rand::thread_rng();
-            let dx = rng.gen_range(-spawn_radius..spawn_radius);
-            let dy = rng.gen_range(-spawn_radius..spawn_radius);
+            let dx = rng.gen_range(-BASE_RADIUS..BASE_RADIUS);
+            let dy = rng.gen_range(-BASE_RADIUS..BASE_RADIUS);
 
             // Calculate the spawn position relative to the base position
-            let spawn_pos = (base_pos.0 + dx, base_pos.1 + dy);
+            let spawn_pos = Vec2::new(base_pos.x + dx, base_pos.y + dy);
 
             commands.spawn((
                 SpriteBundle {
-                    transform: Transform::from_xyz(spawn_pos.0, spawn_pos.1, 10.0),
+                    transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 10.0),
                     texture: asset_server.load(EXPLORER_SPRITE_PATH),
                     ..default()
                 },
@@ -59,6 +56,8 @@ pub fn spawn_explorer_over_time(
                         energy: EXPLORER_ENERGY,
                         speed: EXPLORER_SPEED,
                         iron_cost: EXPLORER_IRON_COST,
+                        destination: Vec2::new(base_pos.x, base_pos.y),
+                        droid_state: DroidState::Idle,
                     },
                     exploration_radius: EXPLORER_EXPLORATION_RADIUS,
                     explorer_action: ExplorerAction::Null,

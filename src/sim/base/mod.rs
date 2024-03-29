@@ -11,6 +11,9 @@ use systems::*;
 use crate::AppState;
 
 use super::SimulationState;
+
+pub const BASE_RADIUS: f32 = 250.0;
+
 pub struct BasePlugin;
 
 impl Plugin for BasePlugin {

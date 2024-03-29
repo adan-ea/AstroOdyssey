@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-pub const EXPLORER_SPAWN_INTERVAL: f32 = 5.0;
+const EXPLORER_SPAWN_INTERVAL: f32 = 5.0;
 
 #[derive(Resource)]
 pub struct ExplorerSpawnTimer {

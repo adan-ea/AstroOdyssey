@@ -6,6 +6,8 @@ pub struct Robot {
     pub speed: f32,
     pub iron_cost: u32,
     pub direction: Vec2,
+    pub destination: Vec2,
+    pub droid_state: DroidState,
 }
 
 pub trait Droid {
@@ -31,6 +33,7 @@ impl Droid for Robot {
     }
 }
 
+#[derive(PartialEq)]
 pub enum DroidState {
     Dead,
     Idle,

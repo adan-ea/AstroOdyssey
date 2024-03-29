@@ -134,9 +134,9 @@ pub fn gen_world(
                             ..default()
                         },
                         Base {
-                            pos: (x, y),
+                            pos: Vec2::new(x, y),
                             iron: 0,
-                            nb_explorer_max: 10,
+                            nb_explorer_max: 1,
                         },
                         Name::new("Base"),
                     ));
