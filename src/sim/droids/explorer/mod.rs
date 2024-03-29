@@ -20,9 +20,9 @@ pub struct ExplorerPlugin;
 impl Plugin for ExplorerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            Update,
-            (explorer_idling)
-                .run_if(in_state(AppState::Sim))
+            Startup,
+            (spawn_explorer)
+                .run_if(in_state(AppState::SimOver))
                 .run_if(in_state(SimulationState::Running)),
         );
     }

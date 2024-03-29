@@ -51,16 +51,16 @@ pub fn spawn_explorer_over_time(
                     ..default()
                 },
                 Explorer {
-                    robot: Robot {
-                        direction: EXPLORER_DIRECTION,
-                        energy: EXPLORER_ENERGY,
-                        speed: EXPLORER_SPEED,
-                        iron_cost: EXPLORER_IRON_COST,
-                        destination: Vec2::new(base_pos.x, base_pos.y),
-                        droid_state: DroidState::Idle,
-                    },
                     exploration_radius: EXPLORER_EXPLORATION_RADIUS,
                     explorer_action: ExplorerAction::Null,
+                },
+                Robot {
+                    direction: EXPLORER_DIRECTION,
+                    energy: EXPLORER_ENERGY,
+                    speed: EXPLORER_SPEED,
+                    iron_cost: EXPLORER_IRON_COST,
+                    destination: Vec2::new(base_pos.x, base_pos.y),
+                    droid_state: DroidState::Idle,
                 },
                 Name::new(EXPLORER_NAME),
             ));

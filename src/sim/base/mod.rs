@@ -13,6 +13,7 @@ use crate::AppState;
 use super::SimulationState;
 
 pub const BASE_RADIUS: f32 = 250.0;
+pub const BASE_MAX_EXPLORER: usize = 10;
 
 pub struct BasePlugin;
 

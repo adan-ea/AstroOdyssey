@@ -3,7 +3,7 @@ use bevy_pancam::PanCam;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
-use crate::sim::base::components::Base;
+use crate::sim::base::{components::Base, BASE_MAX_EXPLORER};
 
 use super::{
     components::Tile, GRID_COLS, GRID_H, GRID_ROWS, GRID_W, SEED, SPRITE_PADDING,
@@ -136,7 +136,7 @@ pub fn gen_world(
                         Base {
                             pos: Vec2::new(x, y),
                             iron: 0,
-                            nb_explorer_max: 1,
+                            nb_explorer_max: BASE_MAX_EXPLORER,
                         },
                         Name::new("Base"),
                     ));
