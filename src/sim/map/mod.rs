@@ -35,8 +35,8 @@ impl Plugin for MapPlugin {
         app
             // Events
             .add_event::<BaseSpawnEvent>()
-            // Enter State systems
-            .add_systems(OnEnter(AppState::Sim), setup)
+            // OnEnter State systems
+            .add_systems(OnEnter(AppState::Sim), spawn_world)
             // Exit State systems
             .add_systems(OnExit(AppState::Sim), despawn_map);
     }

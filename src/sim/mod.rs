@@ -17,8 +17,14 @@ pub struct SimPlugin;
 
 impl Plugin for SimPlugin {
     fn build(&self, app: &mut App) {
-        app.init_state::<SimulationState>()
+        app
+            // States
+            .init_state::<SimulationState>()
+            // App Plugins
             .add_plugins((MapPlugin, BasePlugin, DroidsPlugin))
+            // OnEnter State systems
+            .add_systems(OnEnter(AppState::Sim), spawn_camera)
+            //Systems
             .add_systems(Update, toggle_simulation.run_if(in_state(AppState::Sim)));
     }
 }

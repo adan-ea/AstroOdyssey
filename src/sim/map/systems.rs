@@ -1,5 +1,4 @@
 use bevy::{prelude::*, utils::hashbrown::HashSet};
-use bevy_pancam::PanCam;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
@@ -16,31 +15,9 @@ pub fn despawn_map(mut commands: Commands, tiles_query: Query<Entity, With<Tile>
     }
 }
 
-// Sets up the initial state of the application.
-pub fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    base_spawned_ew: EventWriter<BaseSpawnEvent>,
-) {
-    commands
-        .spawn(Camera2dBundle {
-            transform: Transform::from_xyz(GRID_W as f32, GRID_H as f32, 0.0),
-            ..Default::default()
-        })
-        .insert(PanCam::default());
-
-    gen_world(
-        &mut commands,
-        asset_server,
-        texture_atlases,
-        base_spawned_ew,
-    );
-}
-
 // Generates the world by creating tiles based on noise values.
-pub fn gen_world(
-    commands: &mut Commands,
+pub fn spawn_world(
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
