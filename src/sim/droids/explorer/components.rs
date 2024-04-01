@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
 #[derive(Component)]
+pub struct ExplorerParent;
+
+#[derive(Component)]
 pub struct Explorer {
     pub exploration_radius: f32,
     pub explorer_action: ExplorerAction,

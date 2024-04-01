@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
 pub struct Robot {
     pub energy: f32,
     pub speed: f32,
     pub iron_cost: u32,
-    pub direction: Vec2,
     pub destination: Vec2,
     pub droid_state: DroidState,
 }
@@ -14,7 +14,6 @@ pub trait Droid {
     fn energy(&self) -> f32;
     fn speed(&self) -> f32;
     fn iron_cost(&self) -> u32;
-    fn direction(&self) -> Vec2;
 }
 
 impl Droid for Robot {
@@ -28,15 +27,18 @@ impl Droid for Robot {
         self.iron_cost
     }
 
-    fn direction(&self) -> Vec2 {
-        self.direction
-    }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Reflect)]
 pub enum DroidState {
     Dead,
     Idle,
     Return,
     Working,
+}
+
+impl Default for DroidState {
+    fn default() -> Self {
+        DroidState::Idle
+    }
 }
