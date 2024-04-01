@@ -16,7 +16,7 @@ pub const SPRITE_PADDING: f32 = 2.0;
 pub const SPRITE_SCALE_FACTOR: usize = 5;
 pub const SPRITE_SHEET_HEIGHT: usize = 9;
 pub const SPRITE_SHEET_OFFSET: f32 = 2.0;
-pub const SPRITE_SHEET_PATH: &str = "terrain-sprite.png";
+pub const SPRITE_SHEET_PATH: &str = "sprites/terrain-sprite.png";
 pub const SPRITE_SHEET_WIDTH: usize = 8;
 
 // Window constants
