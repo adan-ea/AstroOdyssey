@@ -1,10 +1,11 @@
 use bevy::prelude::*;
-use bevy_pancam::PanCamPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
+mod main_menu;
 mod sim;
 mod systems;
 
+use main_menu::MainMenuPlugin;
 use sim::SimPlugin;
 use systems::*;
 
@@ -18,7 +19,7 @@ fn main() {
         // App State
         .add_state::<AppState>()
         // App Plugins
-        .add_plugins((PanCamPlugin, SimPlugin))
+        .add_plugins((SimPlugin, MainMenuPlugin))
         // Resources
         .insert_resource(ClearColor(Color::rgba_u8(
             BG_COLOR.0, BG_COLOR.1, BG_COLOR.2, 255,

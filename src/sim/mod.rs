@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_pancam::PanCamPlugin;
 
 mod base;
 mod droids;
@@ -21,11 +22,13 @@ impl Plugin for SimPlugin {
             // States
             .add_state::<SimulationState>()
             // App Plugins
-            .add_plugins((MapPlugin, BasePlugin, DroidsPlugin))
+            .add_plugins((PanCamPlugin, MapPlugin, BasePlugin, DroidsPlugin))
             // OnEnter State systems
             .add_systems(OnEnter(AppState::Sim), spawn_camera)
             //Systems
-            .add_systems(Update, toggle_simulation.run_if(in_state(AppState::Sim)));
+            .add_systems(Update, toggle_simulation.run_if(in_state(AppState::Sim)))
+            // OnExit State systems
+            .add_systems(OnExit(AppState::Sim), despawn_camera);
     }
 }
 

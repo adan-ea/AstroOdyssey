@@ -3,7 +3,10 @@ use bevy_pancam::PanCam;
 
 use crate::AppState;
 
-use super::{map::{GRID_H, GRID_W}, SimulationState};
+use super::{
+    map::{GRID_H, GRID_W},
+    SimulationState,
+};
 
 pub fn toggle_simulation(
     mut commands: Commands,
@@ -30,9 +33,15 @@ pub fn toggle_simulation(
 
 pub fn spawn_camera(mut commands: Commands) {
     commands
-    .spawn(Camera2dBundle {
-        transform: Transform::from_xyz(GRID_W as f32, GRID_H as f32, 0.0),
-        ..Default::default()
-    })
-    .insert(PanCam::default());
+        .spawn(Camera2dBundle {
+            transform: Transform::from_xyz(GRID_W as f32, GRID_H as f32, 0.0),
+            ..Default::default()
+        })
+        .insert(PanCam::default());
+}
+
+pub fn despawn_camera(mut commands: Commands, camera_query: Query<Entity, With<Camera2d>>) {
+    for entity in camera_query.iter() {
+        commands.entity(entity).despawn();
+    }
 }
