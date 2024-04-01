@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_pancam::PanCamPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod sim;
 mod systems;
@@ -13,8 +14,9 @@ fn main() {
     App::new()
         // Bevy Plugins
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(WorldInspectorPlugin::new())
         // App State
-        .init_state::<AppState>()
+        .add_state::<AppState>()
         // App Plugins
         .add_plugins((PanCamPlugin, SimPlugin))
         // Resources

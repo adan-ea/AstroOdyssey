@@ -7,7 +7,7 @@ use super::{map::{GRID_H, GRID_W}, SimulationState};
 
 pub fn toggle_simulation(
     mut commands: Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
+    keyboard_input: Res<Input<KeyCode>>,
     simulation_state: ResMut<State<SimulationState>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
@@ -19,7 +19,7 @@ pub fn toggle_simulation(
         }
     }
     // TODO: Make this work somehow :')
-    if keyboard_input.just_pressed(KeyCode::KeyR) {
+    if keyboard_input.just_pressed(KeyCode::R) {
         commands.insert_resource(NextState(Some(SimulationState::Paused)));
         commands.insert_resource(NextState(Some(AppState::SimOver)));
         commands.insert_resource(NextState(Some(AppState::Sim)));

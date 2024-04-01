@@ -19,21 +19,22 @@ pub fn despawn_map(mut commands: Commands, tiles_query: Query<Entity, With<Tile>
 pub fn spawn_world(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
 ) {
     let mut rng = rand::thread_rng();
     let mut base_spawned = false;
 
     let texture_handle = asset_server.load(SPRITE_SHEET_PATH);
-    let layout = TextureAtlasLayout::from_grid(
+    let texture_atlas = TextureAtlas::from_grid(
+        texture_handle,
         Vec2::new(TILE_WIDTH as f32, TILE_HEIGHT as f32),
         SPRITE_SHEET_WIDTH,
         SPRITE_SHEET_HEIGHT,
         Some(Vec2::splat(SPRITE_PADDING)),
         Some(Vec2::splat(SPRITE_SHEET_OFFSET)),
     );
-    let texture_atlas_handle = texture_atlases.add(layout);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     let seed = if SEED == 0 { rng.gen() } else { SEED };
     let noise = Perlin::new(seed);
@@ -138,14 +139,11 @@ pub fn spawn_world(
         // Spawn tiles using the new SpriteSheetBundle initialization
         commands.spawn((
             SpriteSheetBundle {
-                atlas: TextureAtlas {
-                    layout: texture_atlas_handle.clone(),
-                    index: tile.sprite,
-                },
-                texture: texture_handle.clone(),
+                texture_atlas: texture_atlas_handle.clone(),
+                sprite: TextureAtlasSprite::new(tile.sprite),
                 transform: Transform::from_scale(Vec3::splat(SPRITE_SCALE_FACTOR as f32))
                     .with_translation(Vec3::new(x, y, tile.z_index as f32)),
-                ..Default::default()
+                ..default()
             },
             Tile {
                 pos: tile.pos,

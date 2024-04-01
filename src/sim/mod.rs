@@ -19,7 +19,7 @@ impl Plugin for SimPlugin {
     fn build(&self, app: &mut App) {
         app
             // States
-            .init_state::<SimulationState>()
+            .add_state::<SimulationState>()
             // App Plugins
             .add_plugins((MapPlugin, BasePlugin, DroidsPlugin))
             // OnEnter State systems

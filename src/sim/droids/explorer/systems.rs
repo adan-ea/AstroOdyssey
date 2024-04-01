@@ -36,6 +36,7 @@ pub fn spawn_explorer(
                 destination: Vec2::new(spawn_pos.x, spawn_pos.y),
                 droid_state: DroidState::Idle,
             },
+            Name::new("Explorer")
         ));
     }
 }
