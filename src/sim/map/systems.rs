@@ -1,35 +1,26 @@
-use bevy::{math::vec3, prelude::*, utils::hashbrown::HashSet};
+use bevy::{prelude::*, utils::hashbrown::HashSet};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
-use crate::utils::*;
-use crate::*;
+use super::{
+    components::Tile, BaseSpawnEvent, GRID_COLS, GRID_H, GRID_ROWS, GRID_W, SEED, SPRITE_PADDING,
+    SPRITE_SCALE_FACTOR, SPRITE_SHEET_HEIGHT, SPRITE_SHEET_OFFSET, SPRITE_SHEET_PATH,
+    SPRITE_SHEET_WIDTH, TILE_HEIGHT, TILE_WIDTH,
+};
 
-#[derive(Component)]
-pub struct TileComponent;
-
-pub struct Tile {
-    pub pos: (i32, i32),
-    pub sprite: usize,
-    pub z_index: i32,
-}
-
-impl Tile {
-    // Creates a new Tile instance.
-    pub fn new(pos: (i32, i32), sprite: usize, z_index: i32) -> Self {
-        Self {
-            pos,
-            sprite,
-            z_index,
-        }
+// Despawn all tiles when exiting the simulation state.
+pub fn despawn_map(mut commands: Commands, tiles_query: Query<Entity, With<Tile>>) {
+    for entity in tiles_query.iter() {
+        commands.entity(entity).despawn();
     }
 }
 
 // Generates the world by creating tiles based on noise values.
-pub fn gen_world(
-    commands: &mut Commands,
+pub fn spawn_world(
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
 ) {
     let mut rng = rand::thread_rng();
     let mut base_spawned = false;
@@ -73,7 +64,7 @@ pub fn gen_world(
 
             // Dense Forest
             if (noise_val > 0.5 || noise_val3 > 0.98) && chance > 0.2 {
-                tiles.push(Tile::new((x, y), 27, 5));
+                tiles.push(Tile::new((x, y), 27, 5, true));
                 continue;
             }
             // Patch Forest
@@ -84,7 +75,7 @@ pub fn gen_world(
                 } else {
                     rng.gen_range(24..=25)
                 };
-                tiles.push(Tile::new((x, y), tile, 3));
+                tiles.push(Tile::new((x, y), tile, 3, true));
                 continue;
             }
             // Sparse Forest
@@ -95,14 +86,14 @@ pub fn gen_world(
                 } else {
                     rng.gen_range(24..=25)
                 };
-                tiles.push(Tile::new((x, y), tile, 3));
+                tiles.push(Tile::new((x, y), tile, 3, false));
                 continue;
             }
 
             // Bones
             if noise_val > 0.3 && noise_val < 0.5 && noise_val3 < 0.5 && chance > 0.98 {
                 let tile = rng.gen_range(40..=43);
-                tiles.push(Tile::new((x, y), tile, 1));
+                tiles.push(Tile::new((x, y), tile, 1, false));
                 continue;
             }
 
@@ -116,15 +107,12 @@ pub fn gen_world(
                 let chance2 = rng.gen_range(0.0..1.0);
 
                 if chance2 > 0.98 {
-                    tiles.push(Tile::new((x, y), 19, 10));
+                    let (x, y) = grid_to_world(x as f32, y as f32);
+                    let (x, y) = center_to_top_left(x, y);
 
-                    // Convert grid coordinates to world coordinates
-                    let (world_x, world_y) = grid_to_world(x as f32, y as f32);
-                    println!(
-                        "Base is at grid coordinates: ({}, {}), world coordinates: ({}, {})",
-                        x, y, world_x, world_y
-                    );
-
+                    base_spawned_ew.send(BaseSpawnEvent {
+                        position: Vec2::new(x, y),
+                    });
                     base_spawned = true;
                 }
 
@@ -140,7 +128,7 @@ pub fn gen_world(
             continue;
         }
 
-        tiles.push(Tile::new((*x, *y), tile, 0));
+        tiles.push(Tile::new((*x, *y), tile, 0, false));
     }
 
     for tile in tiles.iter() {
@@ -148,15 +136,23 @@ pub fn gen_world(
         let (x, y) = grid_to_world(x as f32, y as f32);
         let (x, y) = center_to_top_left(x, y);
 
+        // Spawn tiles using the new SpriteSheetBundle initialization
         commands.spawn((
             SpriteSheetBundle {
                 texture_atlas: texture_atlas_handle.clone(),
                 sprite: TextureAtlasSprite::new(tile.sprite),
                 transform: Transform::from_scale(Vec3::splat(SPRITE_SCALE_FACTOR as f32))
-                    .with_translation(vec3(x, y, tile.z_index as f32)),
+                    .with_translation(Vec3::new(x, y, tile.z_index as f32)),
                 ..default()
             },
-            TileComponent,
+            Tile {
+                pos: tile.pos,
+                sprite: tile.sprite,
+                z_index: tile.z_index,
+                blocked: tile.blocked,
+                known: tile.known,
+            },
+            Name::new("Tile"),
         ));
     }
 }
@@ -185,4 +181,19 @@ pub fn get_tile((x, y): (i32, i32), tiles: &HashSet<(i32, i32)>) -> (usize, i32)
     };
 
     (tile, nei_count)
+}
+
+// Converts grid coordinates to world coordinates.
+pub fn grid_to_world(x: f32, y: f32) -> (f32, f32) {
+    (
+        x * TILE_WIDTH as f32 * SPRITE_SCALE_FACTOR as f32,
+        y * TILE_HEIGHT as f32 * SPRITE_SCALE_FACTOR as f32,
+    )
+}
+
+// Converts center coordinates to top-left coordinates.
+pub fn center_to_top_left(x: f32, y: f32) -> (f32, f32) {
+    let x_center = x - (GRID_W as f32 * SPRITE_SCALE_FACTOR as f32) / 2.0;
+    let y_center = (GRID_H as f32 * SPRITE_SCALE_FACTOR as f32) / 2.0 - y;
+    (x_center, y_center)
 }
