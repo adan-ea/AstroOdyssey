@@ -6,8 +6,8 @@ use crate::sim::{
 };
 
 use super::{
-    components::{Healer, HealerAction, HealerParent},
-    HEALER_ENERGY, HEALER_EXPLORATION_RADIUS, HEALER_IRON_COST, HEALER_SPEED,
+    components::{Healer, HealerAction, HealerParent, EnergyConsumption},
+    HEALER_ENERGY, HEALER_IRON_COST, HEALER_SPEED,
     HEALER_SPRITE_PATH,
 };
 
@@ -34,8 +34,10 @@ fn spawn_healer(
                 ..default()
             },
             Healer {
-                exploration_radius: HEALER_EXPLORATION_RADIUS,
                 healer_action: HealerAction::Null,
+                energy_consumption: EnergyConsumption {
+                    healing: 2.0,
+                },
             },
             Robot {
                 energy: HEALER_ENERGY,
