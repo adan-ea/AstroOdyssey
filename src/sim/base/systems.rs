@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::sim::{droids::explorer::components::Explorer, map::events::BaseSpawnEvent};
+use crate::sim::{droids::explorer::components::Explorer,droids::miner::components::Miner, map::events::BaseSpawnEvent};
 
 use super::{
-    Base, ExplorerSpawnEvent, ExplorerSpawnTimer, BASE_MAX_EXPLORER, BASE_RADIUS, BASE_SPRITE_PATH,
+    Base, ExplorerSpawnEvent, ExplorerSpawnTimer, MinerSpawnEvent,MinerSpawnTimer, BASE_MAX_EXPLORER, BASE_MAX_MINER, BASE_RADIUS, BASE_SPRITE_PATH,
 };
 
 pub fn spawn_base(
@@ -25,6 +25,7 @@ pub fn spawn_base(
                 pos: Vec2::new(x, y),
                 iron: 0,
                 nb_explorer_max: BASE_MAX_EXPLORER,
+                nb_miner_max: BASE_MAX_MINER,
             },
         ));
     }
@@ -62,6 +63,36 @@ pub fn spawn_explorer_over_time(
             let spawn_pos = Vec2::new(base_pos.x + dx, base_pos.y + dy);
 
             explorer_spawn_ew.send(ExplorerSpawnEvent { spawn_pos });
+        }
+    }
+}
+
+pub fn tick_miner_spawn_timer(
+    time: Res<Time>,
+    mut miner_spawn_timer: ResMut<MinerSpawnTimer>,
+) {
+    miner_spawn_timer.time.tick(time.delta());
+}
+
+pub fn spawn_miner_over_time(
+    mut miner_spawn_ew: EventWriter<MinerSpawnEvent>,
+    miner_spawn_timer: Res<MinerSpawnTimer>,
+    miner_query: Query<&Miner>,
+    base_query: Query<&Base>,
+) {
+    if miner_spawn_timer.time.finished() {
+        if miner_query.iter().count() < base_query.single().nb_miner_max {
+            let base_pos = base_query.single().pos;
+
+            // Generate random offsets within the spawn radius
+            let mut rng = rand::thread_rng();
+            let dx = rng.gen_range(-BASE_RADIUS..BASE_RADIUS);
+            let dy = rng.gen_range(-BASE_RADIUS..BASE_RADIUS);
+
+            // Calculate the spawn position relative to the base position
+            let spawn_pos = Vec2::new(base_pos.x + dx, base_pos.y + dy);
+
+            miner_spawn_ew.send(MinerSpawnEvent { spawn_pos });
         }
     }
 }
