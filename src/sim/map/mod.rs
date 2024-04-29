@@ -17,17 +17,14 @@ use crate::AppState;
 pub const TERRAIN_SPRITE_PATH: &str = "sprites/terrain-sprite.png";
 pub const TILE_HEIGHT: f32 = 140.;
 pub const TILE_WIDTH: f32 = 120.;
-pub const GRID_W: usize = (CHUNK_MAP_SIDE_LENGTH_X as usize * CHUNKS_X as usize) / 2;
-pub const GRID_H: usize = (CHUNK_MAP_SIDE_LENGTH_Y as usize * CHUNKS_Y as usize) / 2;
+pub const GRID_W: usize = (CHUNK_MAP_SIDE_LENGTH_X as usize) / 2;
+pub const GRID_H: usize = (CHUNK_MAP_SIDE_LENGTH_Y as usize) / 2;
 
 // If seed is set to 0, the seed will be random
 pub const SEED: u32 = 0;
 
 pub const CHUNK_MAP_SIDE_LENGTH_X: u32 = 50;
 pub const CHUNK_MAP_SIDE_LENGTH_Y: u32 = 50;
-
-pub const CHUNKS_X: i32 = 3;
-pub const CHUNKS_Y: i32 = 3;
 
 pub const TILE_SIZE_HEX_ROW: TilemapTileSize = TilemapTileSize {
     x: TILE_WIDTH,
@@ -40,8 +37,8 @@ pub const GRID_SIZE_HEX_ROW: TilemapGridSize = TilemapGridSize {
 };
 
 pub const MAP_SIZE: TilemapSize = TilemapSize {
-    x: CHUNK_MAP_SIDE_LENGTH_X * CHUNKS_X as u32,
-    y: CHUNK_MAP_SIDE_LENGTH_Y * CHUNKS_Y as u32,
+    x: CHUNK_MAP_SIDE_LENGTH_X,
+    y: CHUNK_MAP_SIDE_LENGTH_Y,
 };
 
 pub struct MapPlugin;

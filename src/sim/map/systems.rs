@@ -5,18 +5,20 @@ use rand::Rng;
 
 use super::{
     components::{ChunkPos, TerrainType, Tile, TileIndex},
-    CHUNKS_X, CHUNKS_Y, CHUNK_MAP_SIDE_LENGTH_X, CHUNK_MAP_SIDE_LENGTH_Y, GRID_SIZE_HEX_ROW,
-    MAP_SIZE, SEED, TERRAIN_SPRITE_PATH, TILE_SIZE_HEX_ROW,
+    BaseSpawnEvent, CHUNK_MAP_SIDE_LENGTH_X, CHUNK_MAP_SIDE_LENGTH_Y, GRID_SIZE_HEX_ROW, MAP_SIZE,
+    SEED, TERRAIN_SPRITE_PATH, TILE_SIZE_HEX_ROW,
 };
 
-fn chunk_in_world_position(pos: IVec2, map_type: TilemapType) -> Vec3 {
+const MAP_TYPE: TilemapType = TilemapType::Hexagon(HexCoordSystem::RowEven);
+
+fn chunk_in_world_position(pos: IVec2) -> Vec3 {
     Vec3::new(
         TILE_SIZE_HEX_ROW.x * CHUNK_MAP_SIDE_LENGTH_X as f32 * pos.x as f32,
         TilePos {
             x: 0,
             y: CHUNK_MAP_SIDE_LENGTH_Y,
         }
-        .center_in_world(&GRID_SIZE_HEX_ROW, &map_type)
+        .center_in_world(&GRID_SIZE_HEX_ROW, &MAP_TYPE)
         .y * pos.y as f32,
         0.0,
     )
@@ -25,14 +27,24 @@ fn chunk_in_world_position(pos: IVec2, map_type: TilemapType) -> Vec3 {
 fn hex_pos_from_tile_pos(
     tile_pos: &TilePos,
     grid_size: &TilemapGridSize,
-    map_type: &TilemapType,
     map_transform: &Transform,
 ) -> IVec2 {
     let tile_translation =
-        *map_transform * tile_pos.center_in_world(grid_size, map_type).extend(0.0);
+        *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
 
     let pos = RowEvenPos::from_world_pos(&tile_translation.truncate(), grid_size);
     IVec2 { x: pos.q, y: pos.r }
+}
+
+fn tile_to_world_pos(
+    tile_pos: &TilePos,
+    grid_size: &TilemapGridSize,
+    map_transform: &Transform,
+) -> Vec2 {
+    let tile_translation =
+        *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
+
+    tile_translation.truncate()
 }
 
 pub fn despawn_map(
@@ -52,30 +64,24 @@ pub fn despawn_map(
 #[derive(SystemSet, Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct SpawnChunksSet;
 
-fn spawn_chunks(commands: &mut Commands, asset_server: &Res<AssetServer>, noise: Perlin) {
-    // Makes it so chunks spawn around the world center
-    let lower_bound_x = -(CHUNKS_X / 2);
-    let lower_bound_y = -(CHUNKS_Y / 2);
-    for chunk_x in lower_bound_x..(CHUNKS_X + lower_bound_x) {
-        for chunk_y in lower_bound_y..(CHUNKS_Y + lower_bound_y) {
-            let chunk_pos = ChunkPos(IVec2 {
-                x: chunk_x,
-                y: chunk_y,
-            });
-            spawn_one_chunk(commands, asset_server, noise, chunk_pos)
-        }
-    }
+fn spawn_first_chunk(
+    commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
+    noise: Perlin,
+    base_spawned_ew: EventWriter<BaseSpawnEvent>,
+) {
+    let chunk_pos = ChunkPos(IVec2 { x: 0, y: 0 });
+    spawn_chunk(commands, asset_server, noise, chunk_pos, base_spawned_ew)
 }
 
-pub fn spawn_one_chunk(
+pub fn spawn_chunk(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
     noise: Perlin,
     chunk_pos: ChunkPos,
+    base_spawned_ew: EventWriter<BaseSpawnEvent>,
 ) {
-    let tiles = fill_tile_chunk(noise, chunk_pos);
-
-    let map_type = TilemapType::Hexagon(HexCoordSystem::RowEven);
+    let tiles = fill_tile_chunk(noise, chunk_pos, base_spawned_ew);
 
     let mut tile_storage = TileStorage::empty(MAP_SIZE);
     let tilemap_entity = commands.spawn_empty().id();
@@ -84,6 +90,7 @@ pub fn spawn_one_chunk(
     fill_chunk(tiles, tilemap_id, commands, &mut tile_storage);
 
     let texture_handle: Handle<Image> = asset_server.load(TERRAIN_SPRITE_PATH);
+    let chunk_position = chunk_in_world_position(*chunk_pos);
     commands
         .entity(tilemap_entity)
         .insert((
@@ -94,10 +101,8 @@ pub fn spawn_one_chunk(
                 texture: TilemapTexture::Single(texture_handle),
 
                 tile_size: TILE_SIZE_HEX_ROW,
-                map_type,
-                transform: Transform::from_translation(chunk_in_world_position(
-                    *chunk_pos, map_type,
-                )),
+                map_type: MAP_TYPE,
+                transform: Transform::from_translation(chunk_position),
                 ..Default::default()
             },
             Name::new(format!("Chunk: {:?}", *chunk_pos)),
@@ -108,12 +113,12 @@ pub fn spawn_one_chunk(
 pub fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    //base_spawned_ew: EventWriter<BaseSpawnEvent>,
+    base_spawned_ew: EventWriter<BaseSpawnEvent>,
 ) {
     let mut rng = rand::thread_rng();
     let seed = if SEED == 0 { rng.gen() } else { SEED };
     let noise = Perlin::new(seed);
-    spawn_chunks(&mut commands, &asset_server, noise);
+    spawn_first_chunk(&mut commands, &asset_server, noise, base_spawned_ew);
 }
 
 pub fn get_noise_value(
@@ -125,8 +130,8 @@ pub fn get_noise_value(
     let x = tile_pos.x as f64;
     let y = tile_pos.y as f64;
     let random = noise.get([
-        (x as f64 + (chunk_offset.x as f64 * CHUNK_MAP_SIDE_LENGTH_X as f64)) / divider,
-        (y as f64 + (chunk_offset.y as f64 * CHUNK_MAP_SIDE_LENGTH_Y as f64)) / divider,
+        (x + (chunk_offset.x as f64 * CHUNK_MAP_SIDE_LENGTH_X as f64)) / divider,
+        (y + (chunk_offset.y as f64 * CHUNK_MAP_SIDE_LENGTH_Y as f64)) / divider,
     ]);
 
     random
@@ -147,7 +152,7 @@ fn terrain_type(moist: f64, temp: f64) -> TerrainType {
 fn fill_tile_chunk(
     noise: Perlin,
     chunk_offset: ChunkPos,
-    //mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
+    mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
 ) -> Vec<Tile> {
     let mut tiles: Vec<Tile> = vec![];
 
@@ -200,12 +205,12 @@ fn fill_tile_chunk(
                             index: TileIndex::Mushroom,
                         });
                     }
-                    //TerrainType::Snow => {
-                    //    tiles.push(Tile {
-                    //        pos,
-                    //        index: TileIndex::Snow,
-                    //    });
-                    //}
+                    TerrainType::Snow => {
+                        tiles.push(Tile {
+                            pos,
+                            index: TileIndex::Snow,
+                        });
+                    }
                     _ => {
                         if TerrainType::Lake == terrain_type(moist, temp) {
                             tiles.push(Tile {
@@ -213,14 +218,16 @@ fn fill_tile_chunk(
                                 index: TileIndex::WaterLake,
                             });
                         } else {
-                            // if !base_spawned {
-                            //     base_spawned_ew.send(BaseSpawnEvent {
-                            //         //    position: Vec2::new(x, y),
-                            //         position: pos,
-                            //     });
-                            //     base_spawned = true;
-                            //     continue;
-                            // }
+                            if !base_spawned {
+                                let pos = tile_to_world_pos(
+                                    &pos,
+                                    &GRID_SIZE_HEX_ROW,
+                                    &Transform::default(),
+                                );
+                                base_spawned_ew.send(BaseSpawnEvent { position: pos });
+                                base_spawned = true;
+                                continue;
+                            }
                             tiles.push(Tile {
                                 pos,
                                 index: TileIndex::Grass,
