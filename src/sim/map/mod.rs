@@ -13,6 +13,10 @@ use systems::*;
 
 use crate::AppState;
 
+use self::components::ChunkManager;
+
+use super::SimulationState;
+
 // Sprite sheet constants
 pub const TERRAIN_SPRITE_PATH: &str = "sprites/terrain-sprite.png";
 pub const TILE_HEIGHT: f32 = 140.;
@@ -21,7 +25,7 @@ pub const GRID_W: usize = (CHUNK_MAP_SIDE_LENGTH_X as usize) / 2;
 pub const GRID_H: usize = (CHUNK_MAP_SIDE_LENGTH_Y as usize) / 2;
 
 // If seed is set to 0, the seed will be random
-pub const SEED: u32 = 0;
+pub const SEED: u32 = 4294967295;
 
 pub const CHUNK_MAP_SIDE_LENGTH_X: u32 = 50;
 pub const CHUNK_MAP_SIDE_LENGTH_Y: u32 = 50;
@@ -48,12 +52,18 @@ impl Plugin for MapPlugin {
         app
             // Events
             .add_event::<BaseSpawnEvent>()
+            // Resources
+            .insert_resource(ChunkManager::default())
             // Plugins
             .add_plugins(TilemapPlugin)
             // OnEnter State systems
+            .add_systems(OnEnter(AppState::Sim), setup)
+            // Update State systems
             .add_systems(
-                OnEnter(AppState::Sim),
-                (setup, apply_deferred).chain().in_set(SpawnChunksSet),
+                Update,
+                (spawn_nearby_chunks)
+                    .run_if(in_state(AppState::Sim))
+                    .run_if(in_state(SimulationState::Running)),
             )
             // OnExit State systems
             .add_systems(OnExit(AppState::Sim), despawn_map);

@@ -1,8 +1,5 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
 use bevy_ecs_tilemap::tiles::TilePos;
-
-#[derive(Component)]
-pub struct LabelParent;
 
 #[derive(Debug, Copy, Clone)]
 pub enum TileIndex {
@@ -26,8 +23,6 @@ pub enum TerrainType {
     Ocean,
     Lake,
     Rocky,
-    DenseForest,
-    PatchForest,
     Jungle,
 }
 
@@ -39,3 +34,8 @@ pub struct Tile {
 
 #[derive(Deref, Component, Clone, Copy)]
 pub struct ChunkPos(pub IVec2);
+
+#[derive(Default, Debug, Resource)]
+pub struct ChunkManager {
+    pub spawned_chunks: HashSet<IVec2>,
+}

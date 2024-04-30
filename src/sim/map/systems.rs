@@ -3,75 +3,20 @@ use bevy_ecs_tilemap::{helpers::hex_grid::offset::*, prelude::*};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
+use crate::sim::droids::components::Robot;
+
 use super::{
-    components::{ChunkPos, TerrainType, Tile, TileIndex},
+    components::{ChunkManager, ChunkPos, TerrainType, Tile, TileIndex},
     BaseSpawnEvent, CHUNK_MAP_SIDE_LENGTH_X, CHUNK_MAP_SIDE_LENGTH_Y, GRID_SIZE_HEX_ROW, MAP_SIZE,
-    SEED, TERRAIN_SPRITE_PATH, TILE_SIZE_HEX_ROW,
+    SEED, TERRAIN_SPRITE_PATH, TILE_HEIGHT, TILE_SIZE_HEX_ROW, TILE_WIDTH,
 };
 
 const MAP_TYPE: TilemapType = TilemapType::Hexagon(HexCoordSystem::RowEven);
 
-fn chunk_in_world_position(pos: IVec2) -> Vec3 {
-    Vec3::new(
-        TILE_SIZE_HEX_ROW.x * CHUNK_MAP_SIDE_LENGTH_X as f32 * pos.x as f32,
-        TilePos {
-            x: 0,
-            y: CHUNK_MAP_SIDE_LENGTH_Y,
-        }
-        .center_in_world(&GRID_SIZE_HEX_ROW, &MAP_TYPE)
-        .y * pos.y as f32,
-        0.0,
-    )
-}
-
-fn hex_pos_from_tile_pos(
-    tile_pos: &TilePos,
-    grid_size: &TilemapGridSize,
-    map_transform: &Transform,
-) -> IVec2 {
-    let tile_translation =
-        *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
-
-    let pos = RowEvenPos::from_world_pos(&tile_translation.truncate(), grid_size);
-    IVec2 { x: pos.q, y: pos.r }
-}
-
-fn tile_to_world_pos(
-    tile_pos: &TilePos,
-    grid_size: &TilemapGridSize,
-    map_transform: &Transform,
-) -> Vec2 {
-    let tile_translation =
-        *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
-
-    tile_translation.truncate()
-}
-
-pub fn despawn_map(
-    mut commands: Commands,
-    mut tilemap_query: Query<Entity, With<TileStorage>>,
-    mut text_q: Query<Entity, With<Text>>,
-) {
+pub fn despawn_map(mut commands: Commands, mut tilemap_query: Query<Entity, With<TileStorage>>) {
     for entity in tilemap_query.iter_mut() {
         commands.entity(entity).despawn_recursive();
     }
-
-    for entity in text_q.iter_mut() {
-        commands.entity(entity).despawn_recursive();
-    }
-}
-
-#[derive(SystemSet, Clone, Copy, Hash, PartialEq, Eq, Debug)]
-pub struct SpawnChunksSet;
-
-fn spawn_first_chunk(
-    commands: &mut Commands,
-    asset_server: &Res<AssetServer>,
-    noise: Perlin,
-    base_spawned_ew: EventWriter<BaseSpawnEvent>,
-) {
-    let chunk_pos = ChunkPos(IVec2 { x: 0, y: 0 });
-    spawn_chunk(commands, asset_server, noise, chunk_pos, base_spawned_ew)
 }
 
 pub fn spawn_chunk(
@@ -79,9 +24,8 @@ pub fn spawn_chunk(
     asset_server: &Res<AssetServer>,
     noise: Perlin,
     chunk_pos: ChunkPos,
-    base_spawned_ew: EventWriter<BaseSpawnEvent>,
 ) {
-    let tiles = fill_tile_chunk(noise, chunk_pos, base_spawned_ew);
+    let tiles = fill_tile_chunk(noise, chunk_pos);
 
     let mut tile_storage = TileStorage::empty(MAP_SIZE);
     let tilemap_entity = commands.spawn_empty().id();
@@ -113,12 +57,25 @@ pub fn spawn_chunk(
 pub fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    base_spawned_ew: EventWriter<BaseSpawnEvent>,
+    mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
+    mut chunk_manager: ResMut<ChunkManager>,
 ) {
     let mut rng = rand::thread_rng();
-    let seed = if SEED == 0 { rng.gen() } else { SEED };
-    let noise = Perlin::new(seed);
-    spawn_first_chunk(&mut commands, &asset_server, noise, base_spawned_ew);
+    //let seed = if SEED == 0 { rng.gen() } else { SEED };
+    let noise = Perlin::new(SEED);
+
+    //Spawn first chunk
+    let chunk_pos = ChunkPos(IVec2 { x: 0, y: 0 });
+    chunk_manager.spawned_chunks.insert(*chunk_pos);
+    spawn_chunk(&mut commands, &asset_server, noise, chunk_pos);
+
+    // Spawn Base
+    let pos = tile_to_world_pos(
+        &TilePos::new(0, 0),
+        &GRID_SIZE_HEX_ROW,
+        &Transform::default(),
+    );
+    base_spawned_ew.send(BaseSpawnEvent { position: pos });
 }
 
 pub fn get_noise_value(
@@ -149,14 +106,8 @@ fn terrain_type(moist: f64, temp: f64) -> TerrainType {
     }
 }
 
-fn fill_tile_chunk(
-    noise: Perlin,
-    chunk_offset: ChunkPos,
-    mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
-) -> Vec<Tile> {
+fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> Vec<Tile> {
     let mut tiles: Vec<Tile> = vec![];
-
-    let mut base_spawned = false;
     for x in 0..CHUNK_MAP_SIDE_LENGTH_X {
         for y in 0..CHUNK_MAP_SIDE_LENGTH_Y {
             let pos = TilePos::new(x, y);
@@ -205,12 +156,12 @@ fn fill_tile_chunk(
                             index: TileIndex::Mushroom,
                         });
                     }
-                    TerrainType::Snow => {
-                        tiles.push(Tile {
-                            pos,
-                            index: TileIndex::Snow,
-                        });
-                    }
+                    //TerrainType::Snow => {
+                    //    tiles.push(Tile {
+                    //        pos,
+                    //        index: TileIndex::Snow,
+                    //    });
+                    //}
                     _ => {
                         if TerrainType::Lake == terrain_type(moist, temp) {
                             tiles.push(Tile {
@@ -218,16 +169,6 @@ fn fill_tile_chunk(
                                 index: TileIndex::WaterLake,
                             });
                         } else {
-                            if !base_spawned {
-                                let pos = tile_to_world_pos(
-                                    &pos,
-                                    &GRID_SIZE_HEX_ROW,
-                                    &Transform::default(),
-                                );
-                                base_spawned_ew.send(BaseSpawnEvent { position: pos });
-                                base_spawned = true;
-                                continue;
-                            }
                             tiles.push(Tile {
                                 pos,
                                 index: TileIndex::Grass,
@@ -271,4 +212,80 @@ pub fn fill_chunk(
             tile_storage.set(&tile.pos, tile_entity);
         }
     });
+}
+
+pub fn spawn_nearby_chunks(
+    mut commands: Commands,
+    droid_query: Query<&Transform, With<Robot>>,
+    asset_server: Res<AssetServer>,
+    mut chunk_manager: ResMut<ChunkManager>,
+) {
+    let noise = Perlin::new(SEED);
+    for transform in droid_query.iter() {
+        let droid_pos = Vec2::new(transform.translation.x, transform.translation.y);
+        let droid_pos = droid_pos_to_chunk_pos(&droid_pos);
+
+        for y in (droid_pos.y - 2)..(droid_pos.y + 2) {
+            for x in (droid_pos.x - 2)..(droid_pos.x + 2) {
+                if !chunk_manager.spawned_chunks.contains(&IVec2::new(x, y)) {
+                    chunk_manager.spawned_chunks.insert(IVec2::new(x, y));
+                    spawn_chunk(
+                        &mut commands,
+                        &asset_server,
+                        noise,
+                        ChunkPos(IVec2 { x, y }),
+                    );
+                }
+            }
+        }
+    }
+}
+
+// TODO: Implement despawn_ofr_chunks if performance is an issue
+fn despawn_ofr_chunks() {}
+
+fn droid_pos_to_chunk_pos(camera_pos: &Vec2) -> IVec2 {
+    let camera_pos = camera_pos.as_ivec2();
+    let chunk_size: IVec2 = IVec2::new(
+        CHUNK_MAP_SIDE_LENGTH_X as i32,
+        CHUNK_MAP_SIDE_LENGTH_Y as i32,
+    );
+    let tile_size: IVec2 = IVec2::new(TILE_WIDTH as i32, TILE_HEIGHT as i32);
+    camera_pos / (chunk_size * tile_size)
+}
+
+fn chunk_in_world_position(pos: IVec2) -> Vec3 {
+    Vec3::new(
+        TILE_SIZE_HEX_ROW.x * CHUNK_MAP_SIDE_LENGTH_X as f32 * pos.x as f32,
+        TilePos {
+            x: 0,
+            y: CHUNK_MAP_SIDE_LENGTH_Y,
+        }
+        .center_in_world(&GRID_SIZE_HEX_ROW, &MAP_TYPE)
+        .y * pos.y as f32,
+        0.0,
+    )
+}
+
+fn hex_pos_from_tile_pos(
+    tile_pos: &TilePos,
+    grid_size: &TilemapGridSize,
+    map_transform: &Transform,
+) -> IVec2 {
+    let tile_translation =
+        *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
+
+    let pos = RowEvenPos::from_world_pos(&tile_translation.truncate(), grid_size);
+    IVec2 { x: pos.q, y: pos.r }
+}
+
+fn tile_to_world_pos(
+    tile_pos: &TilePos,
+    grid_size: &TilemapGridSize,
+    map_transform: &Transform,
+) -> Vec2 {
+    let tile_translation =
+        *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
+
+    tile_translation.truncate()
 }
