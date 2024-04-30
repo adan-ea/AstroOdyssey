@@ -13,7 +13,7 @@ use systems::*;
 
 use crate::AppState;
 
-use self::components::ChunkManager;
+use self::components::MapManager;
 
 use super::SimulationState;
 
@@ -23,9 +23,6 @@ pub const TILE_HEIGHT: f32 = 140.;
 pub const TILE_WIDTH: f32 = 120.;
 pub const GRID_W: usize = (CHUNK_MAP_SIDE_LENGTH_X as usize) / 2;
 pub const GRID_H: usize = (CHUNK_MAP_SIDE_LENGTH_Y as usize) / 2;
-
-// If seed is set to 0, the seed will be random
-pub const SEED: u32 = 4294967295;
 
 pub const CHUNK_MAP_SIDE_LENGTH_X: u32 = 50;
 pub const CHUNK_MAP_SIDE_LENGTH_Y: u32 = 50;
@@ -53,7 +50,7 @@ impl Plugin for MapPlugin {
             // Events
             .add_event::<BaseSpawnEvent>()
             // Resources
-            .insert_resource(ChunkManager::default())
+            .insert_resource(MapManager::default())
             // Plugins
             .add_plugins(TilemapPlugin)
             // OnEnter State systems

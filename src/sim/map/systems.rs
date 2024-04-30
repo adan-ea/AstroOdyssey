@@ -6,9 +6,9 @@ use rand::Rng;
 use crate::sim::droids::components::Robot;
 
 use super::{
-    components::{ChunkManager, ChunkPos, TerrainType, Tile, TileIndex},
+    components::{ChunkPos, MapManager, TerrainType, Tile, TileIndex},
     BaseSpawnEvent, CHUNK_MAP_SIDE_LENGTH_X, CHUNK_MAP_SIDE_LENGTH_Y, GRID_SIZE_HEX_ROW, MAP_SIZE,
-    SEED, TERRAIN_SPRITE_PATH, TILE_HEIGHT, TILE_SIZE_HEX_ROW, TILE_WIDTH,
+    TERRAIN_SPRITE_PATH, TILE_HEIGHT, TILE_SIZE_HEX_ROW, TILE_WIDTH,
 };
 
 const MAP_TYPE: TilemapType = TilemapType::Hexagon(HexCoordSystem::RowEven);
@@ -58,15 +58,20 @@ pub fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
-    mut chunk_manager: ResMut<ChunkManager>,
+    mut map_manager: ResMut<MapManager>,
 ) {
     let mut rng = rand::thread_rng();
-    //let seed = if SEED == 0 { rng.gen() } else { SEED };
-    let noise = Perlin::new(SEED);
+    let seed = if map_manager.seed == 0 {
+        rng.gen()
+    } else {
+        map_manager.seed
+    };
+    map_manager.seed = seed;
+    let noise = Perlin::new(seed);
 
     //Spawn first chunk
     let chunk_pos = ChunkPos(IVec2 { x: 0, y: 0 });
-    chunk_manager.spawned_chunks.insert(*chunk_pos);
+    map_manager.spawned_chunks.insert(*chunk_pos);
     spawn_chunk(&mut commands, &asset_server, noise, chunk_pos);
 
     // Spawn Base
@@ -95,14 +100,20 @@ pub fn get_noise_value(
 }
 
 fn terrain_type(moist: f64, temp: f64) -> TerrainType {
-    match () {
-        _ if 0.0 <= moist && moist <= 1.0 && 0.0 <= temp && temp <= 0.2 => TerrainType::Snow,
-        _ if 0.0 <= moist && moist <= 0.4 && 0.0 <= temp && temp <= 0.5 => TerrainType::Mushroom,
-        _ if 0.0 <= moist && moist <= 0.4 && 0.5 <= temp && temp <= 1.0 => TerrainType::Desert,
-        _ if 0.5 <= moist && moist <= 0.9 && 0.4 <= temp && temp <= 1.0 => TerrainType::Jungle,
-        _ if 0.9 <= moist && moist <= 1.0 && 0.0 <= temp && temp <= 1.0 => TerrainType::Lake,
-        _ if 0.0 <= moist && moist <= 0.9 && 0.2 <= temp && temp <= 0.4 => TerrainType::Grassland,
-        _ => TerrainType::Rocky,
+    use TerrainType::*;
+
+    if !(0.0..=1.0).contains(&moist) || !(0.0..=1.0).contains(&temp) {
+        return Rocky;
+    }
+
+    match (moist, temp) {
+        (moist, _) if (0.9..=1.0).contains(&moist) => Lake,
+        (_, temp) if (0.0..=0.2).contains(&temp) => Snow,
+        (moist, temp) if (0.0..=0.4).contains(&moist) && (0.5..=1.0).contains(&temp) => Desert,
+        (moist, temp) if (0.5..=0.9).contains(&moist) && (0.5..=1.0).contains(&temp) => Jungle,
+        (moist, temp) if (0.0..=0.4).contains(&moist) && (0.0..=0.5).contains(&temp) => Mushroom,
+        (_, temp) if (0.2..=0.4).contains(&temp) => Grassland,
+        _ => Rocky,
     }
 }
 
@@ -191,17 +202,17 @@ pub fn spawn_nearby_chunks(
     mut commands: Commands,
     droid_query: Query<&Transform, With<Robot>>,
     asset_server: Res<AssetServer>,
-    mut chunk_manager: ResMut<ChunkManager>,
+    mut map_manager: ResMut<MapManager>,
 ) {
-    let noise = Perlin::new(SEED);
+    let noise = Perlin::new(map_manager.seed);
     for transform in droid_query.iter() {
         let droid_pos = Vec2::new(transform.translation.x, transform.translation.y);
         let droid_pos = droid_pos_to_chunk_pos(&droid_pos);
 
         for y in (droid_pos.y - 2)..(droid_pos.y + 2) {
             for x in (droid_pos.x - 2)..(droid_pos.x + 2) {
-                if !chunk_manager.spawned_chunks.contains(&IVec2::new(x, y)) {
-                    chunk_manager.spawned_chunks.insert(IVec2::new(x, y));
+                if !map_manager.spawned_chunks.contains(&IVec2::new(x, y)) {
+                    map_manager.spawned_chunks.insert(IVec2::new(x, y));
                     spawn_chunk(
                         &mut commands,
                         &asset_server,

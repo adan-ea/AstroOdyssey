@@ -41,7 +41,17 @@ impl Tile {
 #[derive(Deref, Component, Clone, Copy)]
 pub struct ChunkPos(pub IVec2);
 
-#[derive(Default, Debug, Resource)]
-pub struct ChunkManager {
+#[derive(Debug, Resource)]
+pub struct MapManager {
     pub spawned_chunks: HashSet<IVec2>,
+    pub seed: u32,
+}
+
+impl Default for MapManager {
+    fn default() -> Self {
+        Self {
+            spawned_chunks: HashSet::new(),
+            seed: 0,
+        }
+    }
 }
