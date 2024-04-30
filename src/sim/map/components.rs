@@ -14,7 +14,7 @@ pub enum TileIndex {
     Snow = 70,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Debug, Eq, Clone)]
 pub enum TerrainType {
     Snow,
     Desert,
@@ -30,6 +30,12 @@ pub enum TerrainType {
 pub struct Tile {
     pub pos: TilePos,
     pub index: TileIndex,
+}
+
+impl Tile {
+    pub fn new(pos: TilePos, index: TileIndex) -> Self {
+        Self { pos, index }
+    }
 }
 
 #[derive(Deref, Component, Clone, Copy)]

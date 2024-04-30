@@ -119,19 +119,13 @@ fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> Vec<Tile> {
 
             // Ocean
             if noise_val < 0. {
-                tiles.push(Tile {
-                    pos,
-                    index: TileIndex::WaterOcean,
-                });
+                tiles.push(Tile::new(pos, TileIndex::WaterOcean));
                 continue;
             }
 
             // Beach
             if noise_val < 0.05 {
-                tiles.push(Tile {
-                    pos,
-                    index: TileIndex::Desert,
-                });
+                tiles.push(Tile::new(pos, TileIndex::Desert));
                 continue;
             }
 
@@ -139,50 +133,29 @@ fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> Vec<Tile> {
             if noise_val < 0.7 {
                 match terrain_type(moist, temp) {
                     TerrainType::Jungle => {
-                        tiles.push(Tile {
-                            pos,
-                            index: TileIndex::Jungle,
-                        });
+                        tiles.push(Tile::new(pos, TileIndex::Jungle));
                     }
                     TerrainType::Desert => {
-                        tiles.push(Tile {
-                            pos,
-                            index: TileIndex::Desert,
-                        });
+                        tiles.push(Tile::new(pos, TileIndex::Desert));
                     }
                     TerrainType::Mushroom => {
-                        tiles.push(Tile {
-                            pos,
-                            index: TileIndex::Mushroom,
-                        });
+                        tiles.push(Tile::new(pos, TileIndex::Mushroom));
                     }
                     //TerrainType::Snow => {
-                    //    tiles.push(Tile {
-                    //        pos,
-                    //        index: TileIndex::Snow,
-                    //    });
+                    //    tiles.push(Tile::new(pos, TileIndex::Snow));
                     //}
                     _ => {
                         if TerrainType::Lake == terrain_type(moist, temp) {
-                            tiles.push(Tile {
-                                pos,
-                                index: TileIndex::WaterLake,
-                            });
+                            tiles.push(Tile::new(pos, TileIndex::WaterLake));
                         } else {
-                            tiles.push(Tile {
-                                pos,
-                                index: TileIndex::Grass,
-                            });
+                            tiles.push(Tile::new(pos, TileIndex::Grass));
                         }
                     }
                 }
                 continue;
             }
 
-            tiles.push(Tile {
-                pos,
-                index: TileIndex::Rock,
-            });
+            tiles.push(Tile::new(pos, TileIndex::Rock));
         }
     }
 
