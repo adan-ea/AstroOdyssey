@@ -1,199 +1,275 @@
-use bevy::{prelude::*, utils::hashbrown::HashSet};
+use bevy::prelude::*;
+use bevy_ecs_tilemap::{helpers::hex_grid::offset::*, prelude::*};
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
+use crate::sim::droids::components::Robot;
+
 use super::{
-    components::Tile, BaseSpawnEvent, GRID_COLS, GRID_H, GRID_ROWS, GRID_W, SEED, SPRITE_PADDING,
-    SPRITE_SCALE_FACTOR, SPRITE_SHEET_HEIGHT, SPRITE_SHEET_OFFSET, SPRITE_SHEET_PATH,
-    SPRITE_SHEET_WIDTH, TILE_HEIGHT, TILE_WIDTH,
+    components::{ChunkPos, MapManager, TerrainType, Tile, TileIndex},
+    BaseSpawnEvent, CHUNK_MAP_SIDE_LENGTH_X, CHUNK_MAP_SIDE_LENGTH_Y, GRID_SIZE_HEX_ROW, MAP_SIZE,
+    TERRAIN_SPRITE_PATH, TILE_HEIGHT, TILE_SIZE_HEX_ROW, TILE_WIDTH,
 };
 
-// Despawn all tiles when exiting the simulation state.
-pub fn despawn_map(mut commands: Commands, tiles_query: Query<Entity, With<Tile>>) {
-    for entity in tiles_query.iter() {
-        commands.entity(entity).despawn();
+const MAP_TYPE: TilemapType = TilemapType::Hexagon(HexCoordSystem::RowEven);
+
+pub fn despawn_map(mut commands: Commands, mut tilemap_query: Query<Entity, With<TileStorage>>) {
+    for entity in tilemap_query.iter_mut() {
+        commands.entity(entity).despawn_recursive();
     }
 }
 
-// Generates the world by creating tiles based on noise values.
-pub fn spawn_world(
+pub fn spawn_chunk(
+    commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
+    noise: Perlin,
+    chunk_pos: ChunkPos,
+) {
+    let tiles = fill_tile_chunk(noise, chunk_pos);
+
+    let mut tile_storage = TileStorage::empty(MAP_SIZE);
+    let tilemap_entity = commands.spawn_empty().id();
+    let tilemap_id = TilemapId(tilemap_entity);
+
+    fill_chunk(tiles, tilemap_id, commands, &mut tile_storage);
+
+    let texture_handle: Handle<Image> = asset_server.load(TERRAIN_SPRITE_PATH);
+    let chunk_position = chunk_in_world_position(*chunk_pos);
+    commands
+        .entity(tilemap_entity)
+        .insert((
+            TilemapBundle {
+                grid_size: GRID_SIZE_HEX_ROW,
+                size: MAP_SIZE,
+                storage: tile_storage,
+                texture: TilemapTexture::Single(texture_handle),
+
+                tile_size: TILE_SIZE_HEX_ROW,
+                map_type: MAP_TYPE,
+                transform: Transform::from_translation(chunk_position),
+                ..Default::default()
+            },
+            Name::new(format!("Chunk: {:?}", *chunk_pos)),
+        ))
+        .insert(chunk_pos);
+}
+
+pub fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
+    mut map_manager: ResMut<MapManager>,
 ) {
     let mut rng = rand::thread_rng();
-    let mut base_spawned = false;
-
-    let texture_handle = asset_server.load(SPRITE_SHEET_PATH);
-    let texture_atlas = TextureAtlas::from_grid(
-        texture_handle,
-        Vec2::new(TILE_WIDTH as f32, TILE_HEIGHT as f32),
-        SPRITE_SHEET_WIDTH,
-        SPRITE_SHEET_HEIGHT,
-        Some(Vec2::splat(SPRITE_PADDING)),
-        Some(Vec2::splat(SPRITE_SHEET_OFFSET)),
-    );
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
-
-    let seed = if SEED == 0 { rng.gen() } else { SEED };
+    let seed = if map_manager.seed == 0 {
+        rng.gen()
+    } else {
+        map_manager.seed
+    };
+    map_manager.seed = seed;
     let noise = Perlin::new(seed);
 
-    let mut tiles = Vec::new();
-    let mut occupied = HashSet::new();
-    for x in 0..GRID_COLS {
-        for y in 0..GRID_ROWS {
-            let noise_val1 = noise.get([x as f64 / 100.5, y as f64 / 100.5]);
-            let noise_val2 = noise.get([x as f64 / 53.5, y as f64 / 53.5]);
-            let noise_val3 = noise.get([x as f64 / 43.5, y as f64 / 43.5]);
-            let noise_val4 = noise.get([x as f64 / 23.5, y as f64 / 23.5]);
-            let noise_val = (noise_val1 + noise_val2 + noise_val3 + noise_val4) / 4.0;
-            let chance = rng.gen_range(0.0..1.0);
+    //Spawn first chunk
+    let chunk_pos = ChunkPos(IVec2 { x: 0, y: 0 });
+    map_manager.spawned_chunks.insert(*chunk_pos);
+    spawn_chunk(&mut commands, &asset_server, noise, chunk_pos);
 
-            // Ground
-            if noise_val > 0.1 {
-                occupied.insert((x, y));
-            } else {
+    // Spawn Base
+    let pos = tile_to_world_pos(
+        &TilePos::new(0, 0),
+        &GRID_SIZE_HEX_ROW,
+        &Transform::default(),
+    );
+    base_spawned_ew.send(BaseSpawnEvent { position: pos });
+}
+
+pub fn get_noise_value(
+    noise: Perlin,
+    divider: f64,
+    tile_pos: TilePos,
+    chunk_offset: ChunkPos,
+) -> f64 {
+    let x = tile_pos.x as f64;
+    let y = tile_pos.y as f64;
+    let random = noise.get([
+        (x + (chunk_offset.x as f64 * CHUNK_MAP_SIDE_LENGTH_X as f64)) / divider,
+        (y + (chunk_offset.y as f64 * CHUNK_MAP_SIDE_LENGTH_Y as f64)) / divider,
+    ]);
+
+    random
+}
+
+fn terrain_type(moist: f64, temp: f64) -> TerrainType {
+    use TerrainType::*;
+
+    if !(0.0..=1.0).contains(&moist) || !(0.0..=1.0).contains(&temp) {
+        return Rocky;
+    }
+
+    match (moist, temp) {
+        (moist, _) if (0.9..=1.0).contains(&moist) => Lake,
+        (_, temp) if (0.0..=0.2).contains(&temp) => Snow,
+        (moist, temp) if (0.0..=0.4).contains(&moist) && (0.5..=1.0).contains(&temp) => Desert,
+        (moist, temp) if (0.5..=0.9).contains(&moist) && (0.5..=1.0).contains(&temp) => Jungle,
+        (moist, temp) if (0.0..=0.4).contains(&moist) && (0.0..=0.5).contains(&temp) => Mushroom,
+        (_, temp) if (0.2..=0.4).contains(&temp) => Grassland,
+        _ => Rocky,
+    }
+}
+
+fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> Vec<Tile> {
+    let mut tiles: Vec<Tile> = vec![];
+    for x in 0..CHUNK_MAP_SIDE_LENGTH_X {
+        for y in 0..CHUNK_MAP_SIDE_LENGTH_Y {
+            let pos = TilePos::new(x, y);
+            let alt = get_noise_value(noise, 100.5, pos, chunk_offset);
+            let moist = get_noise_value(noise, 63.5, pos, chunk_offset);
+            let temp = get_noise_value(noise, 33.5, pos, chunk_offset);
+
+            let noise_val = (alt + moist + temp) / 3.0;
+
+            // Ocean
+            if noise_val < 0. {
+                tiles.push(Tile::new(pos, TileIndex::WaterOcean));
                 continue;
             }
 
-            // Too close to shore
-            if noise_val < 0.15 {
+            // Beach
+            if noise_val < 0.05 {
+                tiles.push(Tile::new(pos, TileIndex::Desert));
                 continue;
             }
 
-            // Dense Forest
-            if (noise_val > 0.5 || noise_val3 > 0.98) && chance > 0.2 {
-                tiles.push(Tile::new((x, y), 27, 5, true));
-                continue;
-            }
-            // Patch Forest
-            if noise_val3 > 0.5 && noise_val < 0.5 && chance > 0.4 {
-                let chance2 = rng.gen_range(0.0..1.0);
-                let tile = if chance2 > 0.7 {
-                    rng.gen_range(24..=26)
-                } else {
-                    rng.gen_range(24..=25)
-                };
-                tiles.push(Tile::new((x, y), tile, 3, true));
-                continue;
-            }
-            // Sparse Forest
-            if noise_val4 > 0.4 && noise_val < 0.5 && noise_val3 < 0.5 && chance > 0.9 {
-                let chance = rng.gen_range(0.0..1.0);
-                let tile = if chance > 0.78 {
-                    rng.gen_range(28..=29)
-                } else {
-                    rng.gen_range(24..=25)
-                };
-                tiles.push(Tile::new((x, y), tile, 3, false));
-                continue;
-            }
-
-            // Bones
-            if noise_val > 0.3 && noise_val < 0.5 && noise_val3 < 0.5 && chance > 0.98 {
-                let tile = rng.gen_range(40..=43);
-                tiles.push(Tile::new((x, y), tile, 1, false));
-                continue;
-            }
-
-            // Settlement
-            if !base_spawned
-                && noise_val > 0.1
-                && noise_val < 0.3
-                && noise_val3 < 0.4
-                && chance > 0.8
-            {
-                let chance2 = rng.gen_range(0.0..1.0);
-
-                if chance2 > 0.98 {
-                    let (x, y) = grid_to_world(x as f32, y as f32);
-                    let (x, y) = center_to_top_left(x, y);
-
-                    base_spawned_ew.send(BaseSpawnEvent {
-                        position: Vec2::new(x, y),
-                    });
-                    base_spawned = true;
+            // Other biomes
+            if noise_val < 0.7 {
+                match terrain_type(moist, temp) {
+                    TerrainType::Jungle => {
+                        tiles.push(Tile::new(pos, TileIndex::Jungle));
+                    }
+                    TerrainType::Desert => {
+                        tiles.push(Tile::new(pos, TileIndex::Desert));
+                    }
+                    TerrainType::Mushroom => {
+                        tiles.push(Tile::new(pos, TileIndex::Mushroom));
+                    }
+                    //TerrainType::Snow => {
+                    //    tiles.push(Tile::new(pos, TileIndex::Snow));
+                    //}
+                    _ => {
+                        if TerrainType::Lake == terrain_type(moist, temp) {
+                            tiles.push(Tile::new(pos, TileIndex::WaterLake));
+                        } else {
+                            tiles.push(Tile::new(pos, TileIndex::Grass));
+                        }
+                    }
                 }
-
                 continue;
+            }
+
+            tiles.push(Tile::new(pos, TileIndex::Rock));
+        }
+    }
+
+    tiles
+}
+
+/// Fills an entire tile storage with the given tiles.
+pub fn fill_chunk(
+    tiles: Vec<Tile>,
+    tilemap_id: TilemapId,
+    commands: &mut Commands,
+    tile_storage: &mut TileStorage,
+) {
+    commands.entity(tilemap_id.0).with_children(|parent| {
+        for tile in tiles {
+            let tile_entity = parent
+                .spawn((
+                    TileBundle {
+                        position: tile.pos,
+                        tilemap_id,
+                        texture_index: TileTextureIndex(tile.index as u32),
+                        ..Default::default()
+                    },
+                    Name::new(format!("Tile {:?}", tile.pos)),
+                ))
+                .id();
+            tile_storage.set(&tile.pos, tile_entity);
+        }
+    });
+}
+
+pub fn spawn_nearby_chunks(
+    mut commands: Commands,
+    droid_query: Query<&Transform, With<Robot>>,
+    asset_server: Res<AssetServer>,
+    mut map_manager: ResMut<MapManager>,
+) {
+    let noise = Perlin::new(map_manager.seed);
+    for transform in droid_query.iter() {
+        let droid_pos = Vec2::new(transform.translation.x, transform.translation.y);
+        let droid_pos = droid_pos_to_chunk_pos(&droid_pos);
+
+        for y in (droid_pos.y - 2)..(droid_pos.y + 2) {
+            for x in (droid_pos.x - 2)..(droid_pos.x + 2) {
+                if !map_manager.spawned_chunks.contains(&IVec2::new(x, y)) {
+                    map_manager.spawned_chunks.insert(IVec2::new(x, y));
+                    spawn_chunk(
+                        &mut commands,
+                        &asset_server,
+                        noise,
+                        ChunkPos(IVec2 { x, y }),
+                    );
+                }
             }
         }
     }
-
-    for (x, y) in occupied.iter() {
-        let (tile, nei_count) = get_tile((*x, *y), &occupied);
-
-        if nei_count == 1 {
-            continue;
-        }
-
-        tiles.push(Tile::new((*x, *y), tile, 0, false));
-    }
-
-    for tile in tiles.iter() {
-        let (x, y) = tile.pos;
-        let (x, y) = grid_to_world(x as f32, y as f32);
-        let (x, y) = center_to_top_left(x, y);
-
-        // Spawn tiles using the new SpriteSheetBundle initialization
-        commands.spawn((
-            SpriteSheetBundle {
-                texture_atlas: texture_atlas_handle.clone(),
-                sprite: TextureAtlasSprite::new(tile.sprite),
-                transform: Transform::from_scale(Vec3::splat(SPRITE_SCALE_FACTOR as f32))
-                    .with_translation(Vec3::new(x, y, tile.z_index as f32)),
-                ..default()
-            },
-            Tile {
-                pos: tile.pos,
-                sprite: tile.sprite,
-                z_index: tile.z_index,
-                blocked: tile.blocked,
-                known: tile.known,
-            },
-            Name::new("Tile"),
-        ));
-    }
 }
 
-// Determines the tile type and the number of neighboring tiles for a given position.
-pub fn get_tile((x, y): (i32, i32), tiles: &HashSet<(i32, i32)>) -> (usize, i32) {
-    let (x, y) = (x, y);
-    let nei_options = [(-1, 0), (1, 0), (0, -1), (0, 1)];
-    let mut nei = [1; 4];
-    let mut nei_count = 0;
+// TODO: Implement despawn_ofr_chunks if performance is an issue
+fn despawn_ofr_chunks() {}
 
-    for (idx, (i, j)) in nei_options.iter().enumerate() {
-        if tiles.contains(&(x + i, y + j)) {
-            nei_count += 1;
-            continue;
-        }
-        nei[idx] = 0;
-    }
-
-    let tile = match nei {
-        [0, 1, 1, 0] => 3,
-        [1, 0, 1, 0] => 4,
-        [0, 1, 0, 1] => 1,
-        [1, 0, 0, 1] => 2,
-        _ => 0,
-    };
-
-    (tile, nei_count)
+fn droid_pos_to_chunk_pos(camera_pos: &Vec2) -> IVec2 {
+    let camera_pos = camera_pos.as_ivec2();
+    let chunk_size: IVec2 = IVec2::new(
+        CHUNK_MAP_SIDE_LENGTH_X as i32,
+        CHUNK_MAP_SIDE_LENGTH_Y as i32,
+    );
+    let tile_size: IVec2 = IVec2::new(TILE_WIDTH as i32, TILE_HEIGHT as i32);
+    camera_pos / (chunk_size * tile_size)
 }
 
-// Converts grid coordinates to world coordinates.
-pub fn grid_to_world(x: f32, y: f32) -> (f32, f32) {
-    (
-        x * TILE_WIDTH as f32 * SPRITE_SCALE_FACTOR as f32,
-        y * TILE_HEIGHT as f32 * SPRITE_SCALE_FACTOR as f32,
+fn chunk_in_world_position(pos: IVec2) -> Vec3 {
+    Vec3::new(
+        TILE_SIZE_HEX_ROW.x * CHUNK_MAP_SIDE_LENGTH_X as f32 * pos.x as f32,
+        TilePos {
+            x: 0,
+            y: CHUNK_MAP_SIDE_LENGTH_Y,
+        }
+        .center_in_world(&GRID_SIZE_HEX_ROW, &MAP_TYPE)
+        .y * pos.y as f32,
+        0.0,
     )
 }
 
-// Converts center coordinates to top-left coordinates.
-pub fn center_to_top_left(x: f32, y: f32) -> (f32, f32) {
-    let x_center = x - (GRID_W as f32 * SPRITE_SCALE_FACTOR as f32) / 2.0;
-    let y_center = (GRID_H as f32 * SPRITE_SCALE_FACTOR as f32) / 2.0 - y;
-    (x_center, y_center)
+fn hex_pos_from_tile_pos(
+    tile_pos: &TilePos,
+    grid_size: &TilemapGridSize,
+    map_transform: &Transform,
+) -> IVec2 {
+    let tile_translation =
+        *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
+
+    let pos = RowEvenPos::from_world_pos(&tile_translation.truncate(), grid_size);
+    IVec2 { x: pos.q, y: pos.r }
+}
+
+fn tile_to_world_pos(
+    tile_pos: &TilePos,
+    grid_size: &TilemapGridSize,
+    map_transform: &Transform,
+) -> Vec2 {
+    let tile_translation =
+        *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
+
+    tile_translation.truncate()
 }
