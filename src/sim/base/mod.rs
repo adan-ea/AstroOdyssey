@@ -26,7 +26,6 @@ impl Plugin for BasePlugin {
         app
             // Resources
             .init_resource::<ExplorerSpawnTimer>()
-            .init_resource::<MinerSpawnTimer>()
             // Events
             .add_event::<ExplorerSpawnEvent>()
             .add_event::<MinerSpawnEvent>()
@@ -36,8 +35,6 @@ impl Plugin for BasePlugin {
                 (
                     tick_explorer_spawn_timer,
                     spawn_explorer_over_time,
-                    tick_miner_spawn_timer,
-                    spawn_miner_over_time,
                     spawn_base,
                 )
                     .run_if(in_state(AppState::Sim))
