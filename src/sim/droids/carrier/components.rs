@@ -1,25 +1,25 @@
 use bevy::prelude::*;
 
 #[derive(Component)]
-pub struct ExplorerParent;
+pub struct CarrierParent;
 
 #[derive(Component)]
-pub struct Explorer {
+pub struct Carrier {
     pub exploration_radius: f32,
-    pub explorer_action: ExplorerAction,
+    pub carrier_action: CarrierAction,
 }
 
-impl Explorer {
+impl Carrier {
     pub fn exploration_radius(&self) -> f32 {
         800.0
     }
-    pub fn explorer_action(&self) -> ExplorerAction {
-        ExplorerAction::Null
+    pub fn carrier_action(&self) -> CarrierAction {
+        CarrierAction::Null
     }
 }
 
 #[derive(PartialEq)]
-pub enum ExplorerAction {
-    Explore,
+pub enum CarrierAction {
+    Carrier,
     Null,
 }

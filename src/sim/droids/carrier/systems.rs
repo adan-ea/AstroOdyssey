@@ -1,28 +1,28 @@
 use bevy::prelude::*;
 
 use crate::sim::{
-    base::events::ExplorerSpawnEvent,
+    base::events::CarrierSpawnEvent,
     droids::components::{DroidState, Robot},
 };
 
 use super::{
-    components::{Explorer, ExplorerAction, ExplorerParent},
-    EXPLORER_ENERGY, EXPLORER_EXPLORATION_RADIUS, EXPLORER_IRON_COST, EXPLORER_SPEED,
-    EXPLORER_SPRITE_PATH,
+    components::{Carrier, CarrierAction, CarrierParent},
+    CARRIER_ENERGY, CARRIER_EXPLORATION_RADIUS, CARRIER_IRON_COST, CARRIER_SPEED,
+    CARRIER_SPRITE_PATH,
 };
 
-pub fn spawn_explorer_parent(mut commands: Commands) {
+pub fn spawn_carrier_parent(mut commands: Commands) {
     commands.spawn((
         SpatialBundle::default(),
-        ExplorerParent,
-        Name::new("Explorers"),
+        CarrierParent,
+        Name::new("Carriers"),
     ));
 }
 
-fn spawn_explorer(
+fn spawn_carrier(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    parent: &mut Query<Entity, With<ExplorerParent>>,
+    parent: &mut Query<Entity, With<CarrierParent>>,
     spawn_pos: Vec2,
 ) {
     let parent = parent.single();
@@ -30,21 +30,21 @@ fn spawn_explorer(
         commands.spawn((
             SpriteBundle {
                 transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 10.0),
-                texture: asset_server.load(EXPLORER_SPRITE_PATH),
+                texture: asset_server.load(CARRIER_SPRITE_PATH),
                 ..default()
             },
-            Explorer {
-                exploration_radius: EXPLORER_EXPLORATION_RADIUS,
-                explorer_action: ExplorerAction::Null,
+            Carrier {
+                carrier_radius: CARRIER_EXPLORATION_RADIUS,
+                carrier_action: CarrierAction::Null,
             },
             Robot {
-                energy: EXPLORER_ENERGY,
-                speed: EXPLORER_SPEED,
-                iron_cost: EXPLORER_IRON_COST,
+                energy: CARRIER_ENERGY,
+                speed: CARRIER_SPEED,
+                iron_cost: CARRIER_IRON_COST,
                 destination: Vec2::new(spawn_pos.x, spawn_pos.y),
                 droid_state: DroidState::Idle,
             },
-            Name::new("Explorer"),
+            Name::new("Carrier"),
         ));
     });
 }
@@ -52,15 +52,15 @@ fn spawn_explorer(
 pub fn spawn_free_explorer(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut explorer_spawn_er: EventReader<ExplorerSpawnEvent>,
-    mut parent: Query<Entity, With<ExplorerParent>>,
+    mut carrier_spawn_er: EventReader<CarrierSpawnEvent>,
+    mut parent: Query<Entity, With<CarrierParent>>,
 ) {
-    for explorer_spawn in explorer_spawn_er.read() {
+    for carrier_spawn in carrier_spawn_er.read() {
         spawn_explorer(
             &mut commands,
             &asset_server,
             &mut parent,
-            explorer_spawn.spawn_pos,
+            carrier_spawn.spawn_pos,
         );
     }
 }
