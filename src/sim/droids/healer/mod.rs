@@ -11,6 +11,7 @@ pub const HEALER_SPRITE_PATH: &str = "sprites/droids/healer.png";
 pub const HEALER_SPEED: f32 = 130.0;
 pub const HEALER_ENERGY: f32 = 500.0;
 pub const HEALER_IRON_COST: u32 = 300;
+pub const HEALER_HEALING_ENERGY: f32 = 2.0;
 
 pub struct HealerPlugin;
 
@@ -22,7 +23,7 @@ impl Plugin for HealerPlugin {
             // Update Systems
             .add_systems(
                 Update,
-                (spawn_free_healer)
+                (spawn_healer)
                     .run_if(in_state(AppState::Sim))
                     .run_if(in_state(SimulationState::Running)),
             );
