@@ -4,7 +4,7 @@ use crate::sim::{
     base::events::HealerSpawnEvent,
     droids::{
         components::{DroidState, Robot},
-        generate_random_nearby_position,
+        generate_random_nearby_position, random_name,
     },
 };
 
@@ -17,6 +17,26 @@ pub fn spawn_healer_parent(mut commands: Commands) {
     commands.spawn((SpatialBundle::default(), HealerParent, Name::new("Healers")));
 }
 
+const NAME: [&str; 17] = [
+    "Hank",
+    "Harrison",
+    "Hector",
+    "Henry",
+    "Harvey",
+    "Hugo",
+    "Hayden",
+    "Hudson",
+    "Harrison",
+    "Harry",
+    "Harris",
+    "Howard",
+    "Henderson",
+    "Hendrik",
+    "Homer",
+    "Hendricks",
+    "Holly",
+];
+
 pub fn spawn_healer(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -28,6 +48,7 @@ pub fn spawn_healer(
         let spawn_pos = generate_random_nearby_position(healer_spawn.spawn_pos);
 
         commands.entity(parent).with_children(|commands| {
+            let name = random_name(NAME);
             commands.spawn((
                 SpriteBundle {
                     transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 10.0),
@@ -41,13 +62,14 @@ pub fn spawn_healer(
                     },
                 },
                 Robot {
+                    name: name.clone(),
                     energy: HEALER_ENERGY,
                     speed: HEALER_SPEED,
                     iron_cost: HEALER_IRON_COST,
                     destination: Vec2::new(spawn_pos.x, spawn_pos.y),
                     droid_state: DroidState::Idle,
                 },
-                Name::new("Healer"),
+                Name::new(name),
             ));
         });
     }
