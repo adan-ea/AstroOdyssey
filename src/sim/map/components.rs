@@ -1,23 +1,57 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
+use bevy_ecs_tilemap::tiles::TilePos;
 
-#[derive(Component)]
+#[derive(Debug, Copy, Clone)]
+pub enum TileIndex {
+    Dirt = 0,
+    Grass = 10,
+    WaterOcean = 20,
+    WaterLake = 21,
+    Desert = 30,
+    Mushroom = 40,
+    Rock = 50,
+    Jungle = 60,
+    Snow = 70,
+}
+
+#[derive(PartialEq, Copy, Debug, Eq, Clone)]
+pub enum TerrainType {
+    Snow,
+    Desert,
+    Grassland,
+    Mushroom,
+    Ocean,
+    Lake,
+    Rocky,
+    Jungle,
+}
+
+#[derive(Debug)]
 pub struct Tile {
-    pub pos: (i32, i32),
-    pub sprite: usize,
-    pub z_index: i32,
-    pub blocked: bool,
-    pub known: bool,
+    pub pos: TilePos,
+    pub index: TileIndex,
 }
 
 impl Tile {
-    // Creates a new Tile instance.
-    pub fn new(pos: (i32, i32), sprite: usize, z_index: i32, blocked: bool) -> Self {
+    pub fn new(pos: TilePos, index: TileIndex) -> Self {
+        Self { pos, index }
+    }
+}
+
+#[derive(Deref, Component, Clone, Copy)]
+pub struct ChunkPos(pub IVec2);
+
+#[derive(Debug, Resource)]
+pub struct MapManager {
+    pub spawned_chunks: HashSet<IVec2>,
+    pub seed: u32,
+}
+
+impl Default for MapManager {
+    fn default() -> Self {
         Self {
-            pos,
-            sprite,
-            z_index,
-            blocked,
-            known: false,
+            spawned_chunks: HashSet::new(),
+            seed: 0,
         }
     }
 }
