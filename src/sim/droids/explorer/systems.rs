@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::sim::{
     base::events::ExplorerSpawnEvent,
-    droids::{components::{DroidState, Robot}, generate_random_nearby_position},
+    droids::{components::{DroidState, Energy, Robot}, generate_random_nearby_position},
 };
 
 use super::{
@@ -39,7 +39,10 @@ fn spawn_explorer(
                 explorer_action: ExplorerAction::Null,
             },
             Robot {
-                energy: EXPLORER_ENERGY,
+                energy: Energy {
+                    max: EXPLORER_ENERGY,
+                    current: EXPLORER_ENERGY,
+                },
                 speed: EXPLORER_SPEED,
                 iron_cost: EXPLORER_IRON_COST,
                 destination: Vec2::new(spawn_pos.x, spawn_pos.y),

@@ -26,12 +26,12 @@ impl Plugin for DroidsPlugin {
     fn build(&self, app: &mut App) {
         app
             // Plugins
-            .add_plugins(ExplorerPlugin)
-            .add_plugins(MinerPlugin)
+            .add_plugins(ProgressBarPlugin)
+            .add_plugins((ExplorerPlugin, MinerPlugin))
             // Systems
             .add_systems(
                 Update,
-                (droid_idling, move_droid)
+                (droids_idling, move_droids, kill_droids)
                     .run_if(in_state(AppState::Sim))
                     .run_if(in_state(SimulationState::Running)),
             )

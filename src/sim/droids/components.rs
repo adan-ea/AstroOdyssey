@@ -3,30 +3,40 @@ use bevy::prelude::*;
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct Robot {
-    pub energy: f32,
+    pub energy: Energy,
     pub speed: f32,
     pub iron_cost: u32,
     pub destination: Vec2,
     pub droid_state: DroidState,
 }
 
+#[derive(Component, Reflect)]
+pub struct Energy {
+    pub max: f32,
+    pub current: f32,
+}
+
+impl Default for Energy {
+    fn default() -> Self {
+        Self {
+            max: 100.0,
+            current: 100.0,
+        }
+    }
+}
+
 pub trait Droid {
-    fn energy(&self) -> f32;
     fn speed(&self) -> f32;
     fn iron_cost(&self) -> u32;
 }
 
 impl Droid for Robot {
-    fn energy(&self) -> f32 {
-        self.energy
-    }
     fn speed(&self) -> f32 {
         self.speed
     }
     fn iron_cost(&self) -> u32 {
         self.iron_cost
     }
-
 }
 
 #[derive(PartialEq, Reflect)]

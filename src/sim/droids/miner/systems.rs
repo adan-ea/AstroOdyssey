@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::sim::{
     base::events::MinerSpawnEvent,
     droids::{
-        components::{DroidState, Robot},
+        components::{DroidState, Energy, Robot},
         generate_random_nearby_position,
     },
 };
@@ -43,7 +43,10 @@ pub fn spawn_miner(
                     miner_action: MinerAction::Null,
                 },
                 Robot {
-                    energy: MINER_ENERGY,
+                    energy: Energy {
+                        max: MINER_ENERGY,
+                        current: MINER_ENERGY,
+                    },
                     speed: MINER_SPEED,
                     iron_cost: MINER_IRON_COST,
                     destination: Vec2::new(spawn_pos.x, spawn_pos.y),
