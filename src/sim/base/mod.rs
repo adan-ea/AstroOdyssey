@@ -17,6 +17,7 @@ use super::SimulationState;
 pub const BASE_SPRITE_PATH: &str = "sprites/tiles/base.png";
 pub const BASE_RADIUS: f32 = 250.0;
 pub const BASE_MAX_EXPLORER: usize = 10;
+pub const BASE_MAX_MINER: usize = 10;
 
 pub struct BasePlugin;
 
@@ -27,6 +28,7 @@ impl Plugin for BasePlugin {
             .init_resource::<ExplorerSpawnTimer>()
             // Events
             .add_event::<ExplorerSpawnEvent>()
+            .add_event::<MinerSpawnEvent>()
             // Systems
             .add_systems(
                 Update,
