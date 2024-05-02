@@ -4,13 +4,14 @@ use rand::Rng;
 use crate::sim::{droids::explorer::components::Explorer, map::events::BaseSpawnEvent};
 
 use super::{
-    Base, ExplorerSpawnEvent, ExplorerSpawnTimer, BASE_MAX_EXPLORER, BASE_RADIUS, BASE_SPRITE_PATH,
+    Base, ExplorerSpawnEvent, ExplorerSpawnTimer, CarrierSpawnEvent, BASE_MAX_EXPLORER, BASE_MAX_CARRIER, BASE_RADIUS, BASE_SPRITE_PATH,
 };
 
 pub fn spawn_base(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut base_spawned_er: EventReader<BaseSpawnEvent>,
+    mut carrier_spawn_es: EventWriter<CarrierSpawnEvent>,
 ) {
     for base_spawned in base_spawned_er.read() {
         let x = base_spawned.position.x;
@@ -25,8 +26,12 @@ pub fn spawn_base(
                 pos: Vec2::new(x, y),
                 iron: 0,
                 nb_explorer_max: BASE_MAX_EXPLORER,
+                nb_carrier_max: BASE_MAX_CARRIER,
             },
         ));
+        carrier_spawn_es.send(CarrierSpawnEvent {
+            spawn_pos: Vec2::new(x, y),
+        });
     }
 }
 

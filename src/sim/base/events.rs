@@ -4,3 +4,8 @@ use bevy::prelude::*;
 pub struct ExplorerSpawnEvent {
     pub spawn_pos: Vec2,
 }
+
+#[derive(Event)]
+pub struct CarrierSpawnEvent {
+    pub spawn_pos: Vec2,
+}

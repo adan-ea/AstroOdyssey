@@ -7,8 +7,7 @@ use crate::sim::{
 
 use super::{
     components::{Carrier, CarrierAction, CarrierParent},
-    CARRIER_ENERGY, CARRIER_EXPLORATION_RADIUS, CARRIER_IRON_COST, CARRIER_SPEED,
-    CARRIER_SPRITE_PATH,
+    CARRIER_ENERGY, CARRIER_INVENTORY_CAPACITY, CARRIER_IRON_COST, CARRIER_SPEED, CARRIER_SPRITE_PATH,
 };
 
 pub fn spawn_carrier_parent(mut commands: Commands) {
@@ -34,7 +33,7 @@ fn spawn_carrier(
                 ..default()
             },
             Carrier {
-                carrier_radius: CARRIER_EXPLORATION_RADIUS,
+                carrier_radius: CARRIER_INVENTORY_CAPACITY,
                 carrier_action: CarrierAction::Null,
             },
             Robot {
@@ -49,14 +48,14 @@ fn spawn_carrier(
     });
 }
 
-pub fn spawn_free_explorer(
+pub fn spawn_carrier(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut carrier_spawn_er: EventReader<CarrierSpawnEvent>,
+    mut carrier_spawn_es: EventReader<CarrierSpawnEvent>,
     mut parent: Query<Entity, With<CarrierParent>>,
 ) {
-    for carrier_spawn in carrier_spawn_er.read() {
-        spawn_explorer(
+    for carrier_spawn in carrier_spawn_es.read() {
+        spawn_carrier(
             &mut commands,
             &asset_server,
             &mut parent,

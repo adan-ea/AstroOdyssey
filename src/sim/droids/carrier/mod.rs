@@ -10,7 +10,7 @@ mod systems;
 pub const CARRIER_SPRITE_PATH: &str = "sprites/droids/carrier.png";
 pub const CARRIER_SPEED: f32 = 200.0;
 pub const CARRIER_ENERGY: f32 = 800.0;
-pub const CARRIER_EXPLORATION_RADIUS: f32 = 800.0;
+pub const CARRIER_INVENTORY_CAPACITY: usize = 20;
 pub const CARRIER_IRON_COST: u32 = 100;
 
 pub struct CarrierPlugin;
@@ -23,7 +23,7 @@ impl Plugin for CarrierPlugin {
             // Update Systems
             .add_systems(
                 Update,
-                (spawn_free_carrier)
+                (spawn_carrier)
                     .run_if(in_state(AppState::Sim))
                     .run_if(in_state(SimulationState::Running)),
             );
