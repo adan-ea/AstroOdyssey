@@ -14,3 +14,8 @@ pub struct HealerSpawnEvent {
 pub struct MinerSpawnEvent {
     pub spawn_pos: Vec2,
 }
+
+#[derive(Event)]
+pub struct CarrierSpawnEvent {
+    pub spawn_pos: Vec2,
+}

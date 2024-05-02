@@ -7,4 +7,5 @@ pub struct Base {
     pub nb_explorer_max: usize,
     pub nb_healer_max: usize,
     pub nb_miner_max: usize,
+    pub nb_carrier_max: usize,
 }
