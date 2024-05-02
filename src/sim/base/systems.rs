@@ -1,23 +1,24 @@
 use bevy::prelude::*;
-use rand::Rng;
 
 use crate::sim::{droids::explorer::components::Explorer, map::events::BaseSpawnEvent};
 
 use super::{
-    Base, ExplorerSpawnEvent, ExplorerSpawnTimer, MinerSpawnEvent, BASE_MAX_EXPLORER, BASE_MAX_HEALER,
-    BASE_MAX_MINER, BASE_RADIUS, BASE_SPRITE_PATH,
+    Base, ExplorerSpawnEvent, ExplorerSpawnTimer, HealerSpawnEvent, MinerSpawnEvent,
+    BASE_MAX_EXPLORER, BASE_MAX_HEALER, BASE_MAX_MINER, BASE_SPRITE_PATH,
 };
 
 pub fn spawn_base(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut base_spawned_er: EventReader<BaseSpawnEvent>,
-    mut healer_spawn_ew: EventWriter<HealerSpawnEvent>
+    mut healer_spawn_ew: EventWriter<HealerSpawnEvent>,
     mut miner_spawn_ew: EventWriter<MinerSpawnEvent>,
 ) {
     for base_spawned in base_spawned_er.read() {
         let x = base_spawned.position.x;
         let y = base_spawned.position.y;
+        let spawn_pos = Vec2::new(x, y);
+        
         commands.spawn((
             SpriteBundle {
                 transform: Transform::from_xyz(x, y, 100.0),
@@ -25,19 +26,15 @@ pub fn spawn_base(
                 ..default()
             },
             Base {
-                pos: Vec2::new(x, y),
+                pos: spawn_pos,
                 iron: 0,
                 nb_explorer_max: BASE_MAX_EXPLORER,
                 nb_healer_max: BASE_MAX_HEALER,
                 nb_miner_max: BASE_MAX_MINER,
             },
         ));
-         healer_spawn_ew.send(HealerSpawnEvent { 
-            spawn_pos: Vec2::new(x, y), 
-        })     
-         miner_spawn_ew.send(MinerSpawnEvent {
-            spawn_pos: Vec2::new(x, y),
-        });
+        healer_spawn_ew.send(HealerSpawnEvent { spawn_pos });
+        miner_spawn_ew.send(MinerSpawnEvent { spawn_pos });
     }
 }
 
