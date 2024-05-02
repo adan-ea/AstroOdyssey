@@ -1,28 +1,29 @@
 use bevy::{prelude::*, utils::HashSet};
 use bevy_ecs_tilemap::tiles::TilePos;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum TileIndex {
     Dirt = 0,
     Grass = 10,
-    WaterOcean = 20,
-    WaterLake = 21,
-    Desert = 30,
-    Mushroom = 40,
+    DeepWater = 20,
+    ShallowWater = 21,
+    Sand = 30,
+    MushroomTile = 40,
     Rock = 50,
-    Jungle = 60,
+    JungleTile = 60,
     Snow = 70,
 }
 
-#[derive(PartialEq, Copy, Debug, Eq, Clone)]
+#[derive(PartialEq, Copy, Debug, Eq, Clone, Hash)]
 pub enum TerrainType {
-    Snow,
+    Tundra,
+    Beach,
     Desert,
-    Grassland,
+    Plains,
     Mushroom,
     Ocean,
     Lake,
-    Rocky,
+    Mountain,
     Jungle,
 }
 

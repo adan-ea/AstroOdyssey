@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::{helpers::hex_grid::offset::*, prelude::*};
+use lazy_static::lazy_static;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
+use std::collections::HashMap;
 
 use crate::sim::droids::components::Robot;
 
@@ -12,6 +14,65 @@ use super::{
 };
 
 const MAP_TYPE: TilemapType = TilemapType::Hexagon(HexCoordSystem::RowEven);
+
+// Altitude values
+const DEEP_WATER_LEVEL: f64 = -0.15;
+const SHALLOW_WATER_LEVEL: f64 = -0.1;
+const SHORE_LEVEL: f64 = -0.05;
+const MOUNTAIN_LEVEL: f64 = 0.7;
+
+lazy_static! {
+    static ref BIOME_DATA: HashMap<TerrainType, HashMap<TileIndex, f32>> = {
+        use TerrainType::*;
+        use TileIndex::*;
+
+        let mut m = HashMap::new();
+
+        let mut grass = HashMap::new();
+        grass.insert(Grass, 0.98);
+        grass.insert(Dirt, 0.02);
+        m.insert(Plains, grass);
+
+        let mut beach = HashMap::new();
+        beach.insert(Sand, 0.95);
+        beach.insert(Rock, 0.05);
+        m.insert(Beach, beach);
+
+        let mut jungle = HashMap::new();
+        jungle.insert(JungleTile, 1.0);
+        m.insert(Jungle, jungle);
+
+        let mut desert = HashMap::new();
+        desert.insert(Sand, 0.95);
+        desert.insert(Rock, 0.05);
+        m.insert(Desert, desert);
+
+        let mut lake = HashMap::new();
+        lake.insert(ShallowWater, 1.0);
+        m.insert(Lake, lake);
+
+        let mut mountain = HashMap::new();
+        mountain.insert(Rock, 0.9);
+        mountain.insert(Snow, 0.1);
+        m.insert(Mountain, mountain);
+
+        let mut snow = HashMap::new();
+        snow.insert(Snow, 0.95);
+        snow.insert(Rock, 0.03);
+        snow.insert(Grass, 0.02);
+        m.insert(Tundra, snow);
+
+        let mut mushroom = HashMap::new();
+        mushroom.insert(MushroomTile, 1.0);
+        m.insert(Mushroom, mushroom);
+
+        let mut ocean = HashMap::new();
+        ocean.insert(DeepWater, 1.0);
+        m.insert(Ocean, ocean);
+
+        m
+    };
+}
 
 pub fn despawn_map(mut commands: Commands, mut tilemap_query: Query<Entity, With<TileStorage>>) {
     for entity in tilemap_query.iter_mut() {
@@ -103,21 +164,24 @@ fn terrain_type(moist: f64, temp: f64) -> TerrainType {
     use TerrainType::*;
 
     if !(0.0..=1.0).contains(&moist) || !(0.0..=1.0).contains(&temp) {
-        return Rocky;
+        return Mountain;
     }
 
     match (moist, temp) {
         (moist, _) if (0.9..=1.0).contains(&moist) => Lake,
-        (_, temp) if (0.0..=0.2).contains(&temp) => Snow,
+        (_, temp) if (0.0..=0.2).contains(&temp) => Tundra,
         (moist, temp) if (0.0..=0.4).contains(&moist) && (0.5..=1.0).contains(&temp) => Desert,
         (moist, temp) if (0.5..=0.9).contains(&moist) && (0.5..=1.0).contains(&temp) => Jungle,
         (moist, temp) if (0.0..=0.4).contains(&moist) && (0.0..=0.5).contains(&temp) => Mushroom,
-        (_, temp) if (0.2..=0.4).contains(&temp) => Grassland,
-        _ => Rocky,
+        (_, temp) if (0.2..=0.4).contains(&temp) => Plains,
+        _ => Mountain,
     }
 }
 
 fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> Vec<Tile> {
+    use TerrainType::*;
+    use TileIndex::*;
+
     let mut tiles: Vec<Tile> = vec![];
     for x in 0..CHUNK_MAP_SIDE_LENGTH_X {
         for y in 0..CHUNK_MAP_SIDE_LENGTH_Y {
@@ -129,44 +193,50 @@ fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> Vec<Tile> {
             let noise_val = (alt + moist + temp) / 3.0;
 
             // Ocean
-            if noise_val < 0. {
-                tiles.push(Tile::new(pos, TileIndex::WaterOcean));
+            if noise_val < DEEP_WATER_LEVEL {
+                tiles.push(Tile::new(pos, get_tile(Ocean)));
+                continue;
+            }
+
+            // Shallow water
+            if noise_val < SHALLOW_WATER_LEVEL {
+                tiles.push(Tile::new(pos, get_tile(Lake)));
                 continue;
             }
 
             // Beach
-            if noise_val < 0.05 {
-                tiles.push(Tile::new(pos, TileIndex::Desert));
+            if noise_val < SHORE_LEVEL {
+                tiles.push(Tile::new(pos, get_tile(Beach)));
                 continue;
             }
 
             // Other biomes
-            if noise_val < 0.7 {
+            if noise_val < MOUNTAIN_LEVEL {
                 match terrain_type(moist, temp) {
-                    TerrainType::Jungle => {
-                        tiles.push(Tile::new(pos, TileIndex::Jungle));
+                    Jungle => {
+                        tiles.push(Tile::new(pos, get_tile(Jungle)));
                     }
-                    TerrainType::Desert => {
-                        tiles.push(Tile::new(pos, TileIndex::Desert));
+                    Desert => {
+                        tiles.push(Tile::new(pos, get_tile(Desert)));
                     }
-                    TerrainType::Mushroom => {
-                        tiles.push(Tile::new(pos, TileIndex::Mushroom));
+                    Mushroom => {
+                        tiles.push(Tile::new(pos, get_tile(Mushroom)));
                     }
-                    //TerrainType::Snow => {
-                    //    tiles.push(Tile::new(pos, TileIndex::Snow));
-                    //}
+                    Tundra => {
+                        tiles.push(Tile::new(pos, Snow));
+                    }
                     _ => {
-                        if TerrainType::Lake == terrain_type(moist, temp) {
-                            tiles.push(Tile::new(pos, TileIndex::WaterLake));
+                        if Lake == terrain_type(moist, temp) {
+                            tiles.push(Tile::new(pos, get_tile(Lake)));
                         } else {
-                            tiles.push(Tile::new(pos, TileIndex::Grass));
+                            tiles.push(Tile::new(pos, get_tile(Plains)));
                         }
                     }
                 }
                 continue;
             }
 
-            tiles.push(Tile::new(pos, TileIndex::Rock));
+            tiles.push(Tile::new(pos, get_tile(Mountain)));
         }
     }
 
@@ -272,4 +342,20 @@ fn tile_to_world_pos(
         *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
 
     tile_translation.truncate()
+}
+
+fn get_tile(biome: TerrainType) -> TileIndex {
+    let rng = &mut rand::thread_rng();
+    let biome_data = BIOME_DATA.get(&biome).unwrap();
+
+    let random = rng.gen_range(0.0..1.0);
+    let mut running_total = 0.0;
+    for (tile, &value) in biome_data.iter() {
+        running_total += value;
+        if running_total >= random {
+            return *tile;
+        }
+    }
+
+    TileIndex::ShallowWater
 }
