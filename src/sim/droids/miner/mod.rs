@@ -23,7 +23,7 @@ impl Plugin for MinerPlugin {
             // Update Systems
             .add_systems(
                 Update,
-                (spawn_free_miner)
+                (spawn_miner)
                     .run_if(in_state(AppState::Sim))
                     .run_if(in_state(SimulationState::Running)),
             );

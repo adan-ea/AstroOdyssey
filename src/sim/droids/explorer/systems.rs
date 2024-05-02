@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::sim::{
     base::events::ExplorerSpawnEvent,
-    droids::components::{DroidState, Robot},
+    droids::{components::{DroidState, Robot}, generate_random_nearby_position},
 };
 
 use super::{
@@ -27,6 +27,7 @@ fn spawn_explorer(
 ) {
     let parent = parent.single();
     commands.entity(parent).with_children(|commands| {
+        let spawn_pos = generate_random_nearby_position(spawn_pos);
         commands.spawn((
             SpriteBundle {
                 transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 10.0),

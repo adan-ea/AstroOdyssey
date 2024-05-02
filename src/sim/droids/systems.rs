@@ -33,7 +33,7 @@ pub fn droid_idling(
     }
 }
 
-fn generate_random_nearby_position(base_position: Vec2) -> Vec2 {
+pub fn generate_random_nearby_position(base_position: Vec2) -> Vec2 {
     // Generate random offsets within the base radius
     let mut rng = rand::thread_rng();
     let dx = rng.gen_range(-BASE_RADIUS..BASE_RADIUS);
