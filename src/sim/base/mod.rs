@@ -26,7 +26,6 @@ impl Plugin for BasePlugin {
         app
             // Resources
             .init_resource::<ExplorerSpawnTimer>()
-            .init_resource::<HealerSpawnTimer>()
             // Events
             .add_event::<ExplorerSpawnEvent>()
             .add_event::<HealerSpawnEvent>()
@@ -36,8 +35,6 @@ impl Plugin for BasePlugin {
                 (
                     tick_explorer_spawn_timer,
                     spawn_explorer_over_time,
-                    tick_healer_spawn_timer,
-                    spawn_healer_over_time,
                     spawn_base,
                 )
                     .run_if(in_state(AppState::Sim))
