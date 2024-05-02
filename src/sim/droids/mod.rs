@@ -2,10 +2,11 @@ use bevy::prelude::*;
 
 use crate::AppState;
 
-use self::{components::Robot, explorer::ExplorerPlugin, miner::MinerPlugin};
+use self::{components::Robot, explorer::ExplorerPlugin, healer::HealerPlugin, miner::MinerPlugin};
 
 pub mod components;
 pub mod explorer;
+pub mod healer;
 pub mod miner;
 mod systems;
 
@@ -26,8 +27,7 @@ impl Plugin for DroidsPlugin {
     fn build(&self, app: &mut App) {
         app
             // Plugins
-            .add_plugins(ExplorerPlugin)
-            .add_plugins(MinerPlugin)
+            .add_plugins((ExplorerPlugin, HealerPlugin, MinerPlugin))
             // Systems
             .add_systems(
                 Update,
