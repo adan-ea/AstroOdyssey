@@ -9,3 +9,8 @@ pub struct ExplorerSpawnEvent {
 pub struct HealerSpawnEvent {
     pub spawn_pos: Vec2,
 }
+
+#[derive(Event)]
+pub struct MinerSpawnEvent {
+    pub spawn_pos: Vec2,
+}
