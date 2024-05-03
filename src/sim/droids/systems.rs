@@ -33,16 +33,6 @@ pub fn droid_idling(
     }
 }
 
-pub fn generate_random_nearby_position(base_position: Vec2) -> Vec2 {
-    // Generate random offsets within the base radius
-    let mut rng = rand::thread_rng();
-    let dx = rng.gen_range(-BASE_RADIUS..BASE_RADIUS);
-    let dy = rng.gen_range(-BASE_RADIUS..BASE_RADIUS);
-
-    // Returns a random position near the base
-    Vec2::new(base_position.x + dx, base_position.y + dy)
-}
-
 pub fn despawn_droids(mut commands: Commands, droid_query: Query<Entity, With<Robot>>) {
     for entity in droid_query.iter() {
         commands.entity(entity).despawn();
@@ -77,4 +67,20 @@ pub fn move_droid(mut droid_query: Query<(&mut Transform, &mut Robot)>, time: Re
             transform.rotation = interpolated_quaternion;
         }
     }
+}
+
+pub fn generate_random_nearby_position(base_position: Vec2) -> Vec2 {
+    // Generate random offsets within the base radius
+    let mut rng = rand::thread_rng();
+    let dx = rng.gen_range(-BASE_RADIUS..BASE_RADIUS);
+    let dy = rng.gen_range(-BASE_RADIUS..BASE_RADIUS);
+
+    // Returns a random position near the base
+    Vec2::new(base_position.x + dx, base_position.y + dy)
+}
+
+pub fn random_name(name: [&str; 17]) -> String {
+    let mut rng = rand::thread_rng();
+    let index = rng.gen_range(0..name.len());
+    name[index].to_string()
 }

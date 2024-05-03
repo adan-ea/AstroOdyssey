@@ -1,14 +1,18 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::{helpers::hex_grid::offset::*, prelude::*};
-use lazy_static::lazy_static;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
-use std::collections::HashMap;
 
-use crate::sim::droids::components::Robot;
+use crate::sim::{
+    droids::components::Robot,
+    resources::{
+        components::{Resource, ResourceType},
+        events::ResourceSpawnEvent,
+    },
+};
 
 use super::{
-    components::{ChunkPos, MapManager, TerrainType, Tile, TileIndex},
+    components::{ChunkPos, MapManager, TerrainType, Tile, TileIndex, BIOME_DATA, RESOURCES_DATA},
     BaseSpawnEvent, CHUNK_MAP_SIDE_LENGTH_X, CHUNK_MAP_SIDE_LENGTH_Y, GRID_SIZE_HEX_ROW, MAP_SIZE,
     TERRAIN_SPRITE_PATH, TILE_HEIGHT, TILE_SIZE_HEX_ROW, TILE_WIDTH,
 };
@@ -21,59 +25,6 @@ const SHALLOW_WATER_LEVEL: f64 = -0.1;
 const SHORE_LEVEL: f64 = -0.05;
 const MOUNTAIN_LEVEL: f64 = 0.7;
 
-lazy_static! {
-    static ref BIOME_DATA: HashMap<TerrainType, HashMap<TileIndex, f32>> = {
-        use TerrainType::*;
-        use TileIndex::*;
-
-        let mut m = HashMap::new();
-
-        let mut grass = HashMap::new();
-        grass.insert(Grass, 0.98);
-        grass.insert(Dirt, 0.02);
-        m.insert(Plains, grass);
-
-        let mut beach = HashMap::new();
-        beach.insert(Sand, 0.95);
-        beach.insert(Rock, 0.05);
-        m.insert(Beach, beach);
-
-        let mut jungle = HashMap::new();
-        jungle.insert(JungleTile, 1.0);
-        m.insert(Jungle, jungle);
-
-        let mut desert = HashMap::new();
-        desert.insert(Sand, 0.95);
-        desert.insert(Rock, 0.05);
-        m.insert(Desert, desert);
-
-        let mut lake = HashMap::new();
-        lake.insert(ShallowWater, 1.0);
-        m.insert(Lake, lake);
-
-        let mut mountain = HashMap::new();
-        mountain.insert(Rock, 0.9);
-        mountain.insert(Snow, 0.1);
-        m.insert(Mountain, mountain);
-
-        let mut snow = HashMap::new();
-        snow.insert(Snow, 0.95);
-        snow.insert(Rock, 0.03);
-        snow.insert(Grass, 0.02);
-        m.insert(Tundra, snow);
-
-        let mut mushroom = HashMap::new();
-        mushroom.insert(MushroomTile, 1.0);
-        m.insert(Mushroom, mushroom);
-
-        let mut ocean = HashMap::new();
-        ocean.insert(DeepWater, 1.0);
-        m.insert(Ocean, ocean);
-
-        m
-    };
-}
-
 pub fn despawn_map(mut commands: Commands, mut tilemap_query: Query<Entity, With<TileStorage>>) {
     for entity in tilemap_query.iter_mut() {
         commands.entity(entity).despawn_recursive();
@@ -85,13 +36,15 @@ pub fn spawn_chunk(
     asset_server: &Res<AssetServer>,
     noise: Perlin,
     chunk_pos: ChunkPos,
+    resource_spawn_ew: &mut EventWriter<ResourceSpawnEvent>,
 ) {
-    let tiles = fill_tile_chunk(noise, chunk_pos);
+    let (tiles, resources) = fill_tile_chunk(noise, chunk_pos);
 
     let mut tile_storage = TileStorage::empty(MAP_SIZE);
     let tilemap_entity = commands.spawn_empty().id();
     let tilemap_id = TilemapId(tilemap_entity);
 
+    resource_spawn_ew.send(ResourceSpawnEvent { resources });
     fill_chunk(tiles, tilemap_id, commands, &mut tile_storage);
 
     let texture_handle: Handle<Image> = asset_server.load(TERRAIN_SPRITE_PATH);
@@ -119,6 +72,7 @@ pub fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut base_spawned_ew: EventWriter<BaseSpawnEvent>,
+    mut resource_spawn_ew: EventWriter<ResourceSpawnEvent>,
     mut map_manager: ResMut<MapManager>,
 ) {
     let mut rng = rand::thread_rng();
@@ -133,13 +87,20 @@ pub fn setup(
     //Spawn first chunk
     let chunk_pos = ChunkPos(IVec2 { x: 0, y: 0 });
     map_manager.spawned_chunks.insert(*chunk_pos);
-    spawn_chunk(&mut commands, &asset_server, noise, chunk_pos);
+    spawn_chunk(
+        &mut commands,
+        &asset_server,
+        noise,
+        chunk_pos,
+        &mut resource_spawn_ew,
+    );
 
     // Spawn Base
     let pos = tile_to_world_pos(
         &TilePos::new(0, 0),
         &GRID_SIZE_HEX_ROW,
         &Transform::default(),
+        chunk_pos,
     );
     base_spawned_ew.send(BaseSpawnEvent { position: pos });
 }
@@ -178,14 +139,21 @@ fn terrain_type(moist: f64, temp: f64) -> TerrainType {
     }
 }
 
-fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> Vec<Tile> {
+fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> (Vec<Tile>, Vec<Resource>) {
     use TerrainType::*;
-    use TileIndex::*;
 
     let mut tiles: Vec<Tile> = vec![];
+    let mut resources: Vec<Resource> = vec![];
+
     for x in 0..CHUNK_MAP_SIDE_LENGTH_X {
         for y in 0..CHUNK_MAP_SIDE_LENGTH_Y {
             let pos = TilePos::new(x, y);
+            let world_pos = tile_to_world_pos(
+                &pos,
+                &GRID_SIZE_HEX_ROW,
+                &Transform::default(),
+                chunk_offset,
+            );
             let alt = get_noise_value(noise, 100.5, pos, chunk_offset);
             let moist = get_noise_value(noise, 63.5, pos, chunk_offset);
             let temp = get_noise_value(noise, 33.5, pos, chunk_offset);
@@ -215,21 +183,27 @@ fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> Vec<Tile> {
                 match terrain_type(moist, temp) {
                     Jungle => {
                         tiles.push(Tile::new(pos, get_tile(Jungle)));
+                        resources.push(Resource::new(get_resource(Desert), world_pos));
                     }
                     Desert => {
                         tiles.push(Tile::new(pos, get_tile(Desert)));
+                        resources.push(Resource::new(get_resource(Desert), world_pos));
                     }
                     Mushroom => {
                         tiles.push(Tile::new(pos, get_tile(Mushroom)));
+                        resources.push(Resource::new(get_resource(Mushroom), world_pos));
                     }
-                    Tundra => {
-                        tiles.push(Tile::new(pos, Snow));
-                    }
+                    //Tundra => {
+                    //    tiles.push(Tile::new(pos, Snow));
+                    //}
                     _ => {
                         if Lake == terrain_type(moist, temp) {
                             tiles.push(Tile::new(pos, get_tile(Lake)));
                         } else {
                             tiles.push(Tile::new(pos, get_tile(Plains)));
+                            resources.push(Resource::new(get_resource(Plains), world_pos));
+
+                            continue;
                         }
                     }
                 }
@@ -240,7 +214,7 @@ fn fill_tile_chunk(noise: Perlin, chunk_offset: ChunkPos) -> Vec<Tile> {
         }
     }
 
-    tiles
+    (tiles, resources)
 }
 
 /// Fills an entire tile storage with the given tiles.
@@ -273,6 +247,7 @@ pub fn spawn_nearby_chunks(
     droid_query: Query<&Transform, With<Robot>>,
     asset_server: Res<AssetServer>,
     mut map_manager: ResMut<MapManager>,
+    mut resource_spawn_ew: EventWriter<ResourceSpawnEvent>,
 ) {
     let noise = Perlin::new(map_manager.seed);
     for transform in droid_query.iter() {
@@ -288,6 +263,7 @@ pub fn spawn_nearby_chunks(
                         &asset_server,
                         noise,
                         ChunkPos(IVec2 { x, y }),
+                        &mut resource_spawn_ew,
                     );
                 }
             }
@@ -295,17 +271,17 @@ pub fn spawn_nearby_chunks(
     }
 }
 
-// TODO: Implement despawn_ofr_chunks if performance is an issue
-fn despawn_ofr_chunks() {}
+// TODO: Implement despawn out of range chunks if performance is an issue
+fn despawn_oor_chunks() {}
 
-fn droid_pos_to_chunk_pos(camera_pos: &Vec2) -> IVec2 {
-    let camera_pos = camera_pos.as_ivec2();
+fn droid_pos_to_chunk_pos(droid_pos: &Vec2) -> IVec2 {
+    let droid_pos = droid_pos.as_ivec2();
     let chunk_size: IVec2 = IVec2::new(
         CHUNK_MAP_SIDE_LENGTH_X as i32,
         CHUNK_MAP_SIDE_LENGTH_Y as i32,
     );
     let tile_size: IVec2 = IVec2::new(TILE_WIDTH as i32, TILE_HEIGHT as i32);
-    camera_pos / (chunk_size * tile_size)
+    droid_pos / (chunk_size * tile_size)
 }
 
 fn chunk_in_world_position(pos: IVec2) -> Vec3 {
@@ -337,11 +313,18 @@ fn tile_to_world_pos(
     tile_pos: &TilePos,
     grid_size: &TilemapGridSize,
     map_transform: &Transform,
+    chunk_offset: ChunkPos,
 ) -> Vec2 {
     let tile_translation =
         *map_transform * tile_pos.center_in_world(grid_size, &MAP_TYPE).extend(0.0);
+    let chunk_offset = Vec2::new(
+        tile_pos.x as f32 + chunk_offset.x as f32 * CHUNK_MAP_SIDE_LENGTH_X as f32,
+        tile_pos.y as f32 + chunk_offset.y as f32 * CHUNK_MAP_SIDE_LENGTH_Y as f32,
+    );
 
-    tile_translation.truncate()
+    let world_pos = tile_translation.truncate() + chunk_offset;
+    println!("world pos : {}", world_pos);
+    world_pos
 }
 
 fn get_tile(biome: TerrainType) -> TileIndex {
@@ -358,4 +341,20 @@ fn get_tile(biome: TerrainType) -> TileIndex {
     }
 
     TileIndex::ShallowWater
+}
+
+fn get_resource(biome: TerrainType) -> ResourceType {
+    let rng = &mut rand::thread_rng();
+    let resource_data = RESOURCES_DATA.get(&biome).unwrap();
+
+    let random = rng.gen_range(0.0..1.0);
+    let mut running_total = 0.0;
+    for (resource, &value) in resource_data.iter() {
+        running_total += value;
+        if running_total >= random {
+            return *resource;
+        }
+    }
+
+    ResourceType::None
 }
