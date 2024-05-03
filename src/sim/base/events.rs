@@ -19,3 +19,8 @@ pub struct MinerSpawnEvent {
 pub struct CarrierSpawnEvent {
     pub spawn_pos: Vec2,
 }
+
+#[derive(Event)]
+pub struct LumberjackSpawnEvent {
+    pub spawn_pos: Vec2,
+}
