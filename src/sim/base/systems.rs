@@ -3,8 +3,9 @@ use bevy::prelude::*;
 use crate::sim::{droids::explorer::components::Explorer, map::events::BaseSpawnEvent};
 
 use super::{
-    Base, ExplorerSpawnEvent, ExplorerSpawnTimer, HealerSpawnEvent, MinerSpawnEvent, CarrierSpawnEvent, LumberjackSpawnEvent,
-    BASE_MAX_EXPLORER, BASE_MAX_HEALER, BASE_MAX_MINER, BASE_MAX_CARRIER, BASE_MAX_LUMBERJACK,BASE_SPRITE_PATH,
+    Base, CarrierSpawnEvent, ExplorerSpawnEvent, ExplorerSpawnTimer, HealerSpawnEvent,
+    LumberjackSpawnEvent, MinerSpawnEvent, BASE_MAX_CARRIER, BASE_MAX_EXPLORER, BASE_MAX_HEALER,
+    BASE_MAX_LUMBERJACK, BASE_MAX_MINER, BASE_SPRITE_PATH,
 };
 
 pub fn spawn_base(
@@ -15,12 +16,13 @@ pub fn spawn_base(
     mut miner_spawn_ew: EventWriter<MinerSpawnEvent>,
     mut carrier_spawn_ew: EventWriter<CarrierSpawnEvent>,
     mut lumberjack_spawn_ew: EventWriter<LumberjackSpawnEvent>,
+    mut explorer_spawn_ew: EventWriter<ExplorerSpawnEvent>,
 ) {
     for base_spawned in base_spawned_er.read() {
         let x = base_spawned.position.x;
         let y = base_spawned.position.y;
         let spawn_pos = Vec2::new(x, y);
-        
+
         commands.spawn((
             SpriteBundle {
                 transform: Transform::from_xyz(x, y, 100.0),
@@ -41,6 +43,7 @@ pub fn spawn_base(
         miner_spawn_ew.send(MinerSpawnEvent { spawn_pos });
         carrier_spawn_ew.send(CarrierSpawnEvent { spawn_pos });
         lumberjack_spawn_ew.send(LumberjackSpawnEvent { spawn_pos });
+        explorer_spawn_ew.send(ExplorerSpawnEvent { spawn_pos });
     }
 }
 

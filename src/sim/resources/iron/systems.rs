@@ -26,7 +26,7 @@ pub fn generate_iron(
         commands.entity(parent).with_children(|commands| {
             commands.spawn((
                 SpriteBundle {
-                    transform: Transform::from_xyz(iron.position.x, iron.position.y, 10.0),
+                    transform: Transform::from_xyz(iron.position.x, iron.position.y, 5.0),
                     texture: asset_server.load("sprites/resources/rich-iron-5.png"),
                     ..Default::default()
                 },

@@ -22,7 +22,7 @@ pub fn generate_tree(
         commands.entity(parent).with_children(|commands| {
             commands.spawn((
                 SpriteBundle {
-                    transform: Transform::from_xyz(tree.position.x, tree.position.y, 10.0),
+                    transform: Transform::from_xyz(tree.position.x, tree.position.y, 5.0),
                     texture: asset_server.load("sprites/resources/trees/treeRound_large.png"),
                     ..Default::default()
                 },
