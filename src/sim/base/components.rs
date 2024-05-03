@@ -8,4 +8,5 @@ pub struct Base {
     pub nb_healer_max: usize,
     pub nb_miner_max: usize,
     pub nb_carrier_max: usize,
+    pub nb_lumberjack_max: usize,
 }

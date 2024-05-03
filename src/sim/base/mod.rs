@@ -20,6 +20,7 @@ pub const BASE_MAX_EXPLORER: usize = 10;
 pub const BASE_MAX_HEALER: usize = 10;
 pub const BASE_MAX_MINER: usize = 10;
 pub const BASE_MAX_CARRIER: usize = 10;
+pub const BASE_MAX_LUMBERJACK: usize = 5;
 
 pub struct BasePlugin;
 
@@ -33,6 +34,7 @@ impl Plugin for BasePlugin {
             .add_event::<HealerSpawnEvent>()
             .add_event::<MinerSpawnEvent>()
             .add_event::<CarrierSpawnEvent>()
+            .add_event::<LumberjackSpawnEvent>()
             // Systems
             .add_systems(
                 Update,
