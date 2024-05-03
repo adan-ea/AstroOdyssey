@@ -323,7 +323,6 @@ fn tile_to_world_pos(
     );
 
     let world_pos = tile_translation.truncate() + chunk_offset;
-    println!("world pos : {}", world_pos);
     world_pos
 }
 
