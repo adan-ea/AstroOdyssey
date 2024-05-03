@@ -2,7 +2,10 @@ use bevy::prelude::*;
 
 use crate::sim::{
     base::events::ExplorerSpawnEvent,
-    droids::{components::{DroidState, Robot}, generate_random_nearby_position},
+    droids::{
+        components::{DroidState, Robot},
+        generate_random_nearby_position, random_name,
+    },
 };
 
 use super::{
@@ -10,6 +13,11 @@ use super::{
     EXPLORER_ENERGY, EXPLORER_EXPLORATION_RADIUS, EXPLORER_IRON_COST, EXPLORER_SPEED,
     EXPLORER_SPRITE_PATH,
 };
+
+const NAME: [&str; 17] = [
+    "Etienne", "Eric", "Ethan", "Evan", "Ezra", "Ezekiel", "Eli", "Elijah", "Elias", "Emmett",
+    "Emmanuel", "Eduardo", "Edward", "Edgar", "Erick", "Eduard", "Emanuel",
+];
 
 pub fn spawn_explorer_parent(mut commands: Commands) {
     commands.spawn((
@@ -28,6 +36,7 @@ fn spawn_explorer(
     let parent = parent.single();
     commands.entity(parent).with_children(|commands| {
         let spawn_pos = generate_random_nearby_position(spawn_pos);
+        let name = random_name(NAME);
         commands.spawn((
             SpriteBundle {
                 transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 10.0),
@@ -39,13 +48,14 @@ fn spawn_explorer(
                 explorer_action: ExplorerAction::Null,
             },
             Robot {
+                name: name.clone(),
                 energy: EXPLORER_ENERGY,
                 speed: EXPLORER_SPEED,
                 iron_cost: EXPLORER_IRON_COST,
                 destination: Vec2::new(spawn_pos.x, spawn_pos.y),
                 droid_state: DroidState::Idle,
             },
-            Name::new("Explorer"),
+            Name::new(name),
         ));
     });
 }

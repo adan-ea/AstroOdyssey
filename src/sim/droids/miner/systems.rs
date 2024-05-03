@@ -4,7 +4,7 @@ use crate::sim::{
     base::events::MinerSpawnEvent,
     droids::{
         components::{DroidState, Robot},
-        generate_random_nearby_position,
+        generate_random_nearby_position, random_name,
     },
 };
 
@@ -12,6 +12,11 @@ use super::{
     components::{Miner, MinerAction, MinerParent},
     MINER_ENERGY, MINER_INVENTORY_CAPACITY, MINER_IRON_COST, MINER_SPEED, MINER_SPRITE_PATH,
 };
+
+const NAME: [&str; 17] = [
+    "Milo", "Miles", "Morgan", "Max", "Mason", "Matthew", "Michael", "Mark", "Maverick", "Maddox",
+    "Malachi", "Mateo", "Martin", "Marshall", "Mario", "Maurice", "Mauricio",
+];
 
 pub fn spawn_miner_parent(mut commands: Commands) {
     commands.spawn((
@@ -32,6 +37,7 @@ pub fn spawn_miner(
         let spawn_pos = generate_random_nearby_position(miner_spawn.spawn_pos);
 
         commands.entity(parent).with_children(|commands| {
+            let name = random_name(NAME);
             commands.spawn((
                 SpriteBundle {
                     transform: Transform::from_xyz(spawn_pos.x, spawn_pos.y, 10.0),
@@ -43,13 +49,14 @@ pub fn spawn_miner(
                     miner_action: MinerAction::Null,
                 },
                 Robot {
+                    name: name.clone(),
                     energy: MINER_ENERGY,
                     speed: MINER_SPEED,
                     iron_cost: MINER_IRON_COST,
                     destination: Vec2::new(spawn_pos.x, spawn_pos.y),
                     droid_state: DroidState::Idle,
                 },
-                Name::new("Miner"),
+                Name::new(name),
             ));
         });
     }

@@ -3,6 +3,7 @@ use bevy::prelude::*;
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct Robot {
+    pub name: String,
     pub energy: f32,
     pub speed: f32,
     pub iron_cost: u32,

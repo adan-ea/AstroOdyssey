@@ -4,10 +4,11 @@ use bevy_pancam::PanCamPlugin;
 mod base;
 mod droids;
 mod map;
+mod resources;
 mod systems;
-
 use base::BasePlugin;
 use map::MapPlugin;
+use resources::ResourcesPlugin;
 use systems::*;
 
 use crate::AppState;
@@ -22,7 +23,13 @@ impl Plugin for SimPlugin {
             // States
             .add_state::<SimulationState>()
             // App Plugins
-            .add_plugins((PanCamPlugin, MapPlugin, BasePlugin, DroidsPlugin))
+            .add_plugins((
+                PanCamPlugin,
+                MapPlugin,
+                BasePlugin,
+                DroidsPlugin,
+                ResourcesPlugin,
+            ))
             // OnEnter State systems
             .add_systems(OnEnter(AppState::Sim), spawn_camera)
             //Systems
