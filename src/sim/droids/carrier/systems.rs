@@ -4,7 +4,7 @@ use crate::sim::{
     base::events::CarrierSpawnEvent,
     droids::{
         components::{DroidState, Robot},
-        generate_random_nearby_position,
+        generate_random_nearby_position, random_name,
     },
 };
 
@@ -12,6 +12,11 @@ use super::{
     components::{Carrier, CarrierAction, CarrierParent},
     CARRIER_ENERGY, CARRIER_INVENTORY_CAPACITY, CARRIER_IRON_COST, CARRIER_SPEED, CARRIER_SPRITE_PATH,
 };
+
+const NAME: [&str; 17] = [
+    "Carlo", "Charles", "Claire", "Carl", "Carlito", "Carlush", "Celine", "Cecile", "Clarisse", "Celestin",
+    "Caesar","Cyril","Corinne","Cyrile","Clef","Concorde","Cabine"
+];
 
 pub fn spawn_carrier_parent(mut commands: Commands) {
     commands.spawn((
@@ -30,7 +35,7 @@ pub fn spawn_carrier(
     let parent = parent.single();
     for carrier_spawn in carrier_spawn_er.read() {
         let spawn_pos = generate_random_nearby_position(carrier_spawn.spawn_pos);
-
+        let name = random_name(NAME);
         commands.entity(parent).with_children(|commands| {
             commands.spawn((
                 SpriteBundle {
@@ -43,13 +48,14 @@ pub fn spawn_carrier(
                     carrier_action: CarrierAction::Null,
                 },
                 Robot {
+                    name: name.clone(),
                     energy: CARRIER_ENERGY,
                     speed: CARRIER_SPEED,
                     iron_cost: CARRIER_IRON_COST,
                     destination: Vec2::new(spawn_pos.x, spawn_pos.y),
                     droid_state: DroidState::Idle,
                 },
-                Name::new("Carrier"),
+                Name::new(name),
             ));
         });
     }

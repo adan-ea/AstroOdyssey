@@ -4,7 +4,7 @@ use crate::sim::{
     base::events::LumberjackSpawnEvent,
     droids::{
         components::{DroidState, Robot},
-        generate_random_nearby_position,
+        generate_random_nearby_position, random_name,
     },
 };
 
@@ -12,6 +12,11 @@ use super::{
     components::{Lumberjack, LumberjackAction, LumberjackParent},
     LUMBERJACK_ENERGY, LUMBERJACK_INVENTORY_CAPACITY,LUMBERJACK_IRON_COST, LUMBERJACK_SPEED, LUMBERJACK_SPRITE_PATH,
 };
+
+const NAME: [&str; 17] = [
+    "Lola", "Luc", "Laura", "Leyten", "Lali", "Lila", "Lolo", "Lara", "Larissa", "Landers",
+    "Lazard","Lafin","Ledeb","Lyrics","Lomber","Lufthansa","Labine"
+];
 
 pub fn spawn_lumberjack_parent(mut commands: Commands) {
     commands.spawn((
@@ -30,7 +35,7 @@ pub fn spawn_lumberjack(
     let parent = parent.single();
     for lumberjack_spawn in lumberjack_spawn_er.read() {
         let spawn_pos = generate_random_nearby_position(lumberjack_spawn.spawn_pos);
-
+        let name = random_name(NAME);
         commands.entity(parent).with_children(|commands| {
             commands.spawn((
                 SpriteBundle {
@@ -43,13 +48,14 @@ pub fn spawn_lumberjack(
                     lumberjack_action: LumberjackAction::Null,
                 },
                 Robot {
+                    name: name.clone(),
                     energy: LUMBERJACK_ENERGY,
                     speed: LUMBERJACK_SPEED,
                     iron_cost: LUMBERJACK_IRON_COST,
                     destination: Vec2::new(spawn_pos.x, spawn_pos.y),
                     droid_state: DroidState::Idle,
                 },
-                Name::new("Lumberjack"),
+                Name::new(name),
             ));
         });
     }
