@@ -26,6 +26,10 @@ impl Plugin for MinerPlugin {
                 (spawn_miner)
                     .run_if(in_state(AppState::Sim))
                     .run_if(in_state(SimulationState::Running)),
+            )
+            .add_systems(
+                Update,
+                miner_behavior_system.run_if(in_state(AppState::Sim)).run_if(in_state(SimulationState::Running)),
             );
     }
 }

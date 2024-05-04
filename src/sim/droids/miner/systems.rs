@@ -6,7 +6,9 @@ use crate::sim::{
         components::{DroidState, Robot},
         generate_random_nearby_position, random_name,
     },
+    resources::iron::components::Iron
 };
+
 
 use super::{
     components::{Miner, MinerAction, MinerParent},
@@ -59,5 +61,44 @@ pub fn spawn_miner(
                 Name::new(name),
             ));
         });
+    }
+}
+
+pub fn miner_behavior_system(
+    mut query: Query<(&mut Miner, &mut Robot, &Transform)>,
+    //resource_query: Query<(&dyn Resource, &Transform), With<Iron>>,
+) {
+    for (mut miner, mut robot, miner_transform) in query.iter_mut() {
+        match miner.miner_action {
+            MinerAction::Mine => {
+                // Mine
+                //robot.destination = resource_transform.translation.truncate();
+                robot.droid_state = DroidState::Working;
+                miner.inventory_capacity += 1; // add iron to inventory
+                // Fin the more nearby ressource
+                /*if let Some((_, resource_transform)) = resource_query.iter()
+                    .filter(|(_, transform)| transform.translation.distance(miner_transform.translation) < 50.0)
+                    .min_by_key(|(_, transform)| transform.translation.distance(miner_transform.translation) as u32)
+                {
+                    // Mine
+                    robot.destination = resource_transform.translation.truncate();
+                    robot.droid_state = DroidState::Working;
+                    miner.inventory_capacity += 1; // add iron to inventory
+                } else {
+                    miner.miner_action = MinerAction::DropOff;
+                }*/
+            },
+            MinerAction::DropOff => {
+                let base_position = Vec2::new(0.0, 0.0);
+                robot.destination = base_position;
+                if robot.destination == miner_transform.translation.truncate() {
+                    // drop off iron
+                    miner.inventory_capacity = 0;
+                    robot.droid_state = DroidState::Idle;
+                    miner.miner_action = MinerAction::Mine;
+                }
+            },
+            _ => {},
+        }
     }
 }

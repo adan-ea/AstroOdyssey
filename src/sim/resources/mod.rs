@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-mod iron;
-mod tree;
+pub mod iron;
+pub mod tree;
 
 pub mod components;
 pub mod events;
